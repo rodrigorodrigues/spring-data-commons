@@ -17,9 +17,9 @@ package org.springframework.data.mapping;
 
 import java.lang.reflect.Executable;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.util.Assert;
 
@@ -35,7 +35,7 @@ class InstanceCreatorMetadataSupport<T, P extends PersistentProperty<P>> impleme
 
 	private final Executable executable;
 	private final List<Parameter<Object, P>> parameters;
-	private final Map<PersistentProperty<?>, Boolean> isPropertyParameterCache = new ConcurrentHashMap<>();
+	private volatile Map<PersistentProperty<?>, Boolean> isPropertyParameterCache = new HashMap<>();
 
 	/**
 	 * Creates a new {@link InstanceCreatorMetadataSupport} from the given {@link Executable} and {@link Parameter}s.
@@ -67,6 +67,7 @@ class InstanceCreatorMetadataSupport<T, P extends PersistentProperty<P>> impleme
 	 *
 	 * @return
 	 */
+	@Override
 	public List<Parameter<Object, P>> getParameters() {
 		return parameters;
 	}
@@ -89,15 +90,25 @@ class InstanceCreatorMetadataSupport<T, P extends PersistentProperty<P>> impleme
 
 		Boolean cached = isPropertyParameterCache.get(property);
 
-		if (cached != null) {
-			return cached;
+		if (cached == null) {
+
+			synchronized (this) {
+
+				Boolean fromCache = isPropertyParameterCache.get(property);
+				if (fromCache != null) {
+					cached = fromCache;
+				} else {
+
+					cached = doGetIsCreatorParameter(property);
+
+					Map<PersistentProperty<?>, Boolean> isPropertyParameterCache = new HashMap<>(this.isPropertyParameterCache);
+					isPropertyParameterCache.put(property, cached);
+					this.isPropertyParameterCache = isPropertyParameterCache;
+				}
+			}
 		}
 
-		boolean result = doGetIsCreatorParameter(property);
-
-		isPropertyParameterCache.put(property, result);
-
-		return result;
+		return cached;
 	}
 
 	@Override

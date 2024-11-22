@@ -13,19 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.springframework.data.repository.core.support;
+package org.springframework.data.repository.core;
 
 import java.lang.reflect.Method;
-
-import org.springframework.data.repository.core.RepositoryMetadata;
-import org.springframework.lang.Nullable;
 
 /**
  * Interface containing methods and value objects to obtain information about the current repository method invocation.
  * <p>
- * The {@link #currentMethod()} method is usable if the repository factory is configured to expose the current
- * repository method metadata (not the default). It returns the invoked repository method. Target objects or advice can
- * use this to make advised calls.
+ * The {@link #getMetadata()} method is usable if the repository factory is configured to expose the current repository
+ * method metadata (not the default). It returns the invoked repository method. Target objects or advice can use this to
+ * make advised calls.
  * <p>
  * Spring Data's framework does not expose method metadata by default, as there is a performance cost in doing so.
  * <p>
@@ -35,7 +32,8 @@ import org.springframework.lang.Nullable;
  *
  * @author Christoph Strobl
  * @author Mark Paluch
- * @since 3.4.0
+ * @author Oliver Drotbohm
+ * @since 3.4
  */
 public interface RepositoryMethodContext {
 
@@ -49,37 +47,16 @@ public interface RepositoryMethodContext {
 	 *           outside a repository method invocation context, or because the repository has not been configured to
 	 *           expose its metadata.
 	 */
-	static RepositoryMethodContext currentMethod() throws IllegalStateException {
-
-		RepositoryMethodContext metadata = DefaultRepositoryMethodContext.getMetadata();
-		if (metadata == null) {
-			throw new IllegalStateException(
-					"Cannot find current repository method: Set 'exposeMetadata' property on RepositoryFactorySupport to 'true' to make it available, and "
-							+ "ensure that RepositoryMethodContext.currentMethod() is invoked in the same thread as the repository invocation.");
-		}
-		return metadata;
-	}
-
-	/**
-	 * Make the given repository method metadata available via the {@link #currentMethod()} method.
-	 * <p>
-	 * Note that the caller should be careful to keep the old value as appropriate.
-	 *
-	 * @param metadata the metadata to expose (or {@code null} to reset it)
-	 * @return the old metadata, which may be {@code null} if none was bound
-	 * @see #currentMethod()
-	 */
-	@Nullable
-	static RepositoryMethodContext setCurrentMetadata(@Nullable RepositoryMethodContext metadata) {
-		return DefaultRepositoryMethodContext.setMetadata(metadata);
+	static RepositoryMethodContext getContext() throws IllegalStateException {
+		return RepositoryMethodContextHolder.getContext();
 	}
 
 	/**
 	 * Returns the metadata for the repository.
 	 *
-	 * @return the repository metadata.
+	 * @return the repository metadata, will never be {@literal null}.
 	 */
-	RepositoryMetadata getRepository();
+	RepositoryMetadata getMetadata();
 
 	/**
 	 * Returns the current method that is being invoked.
@@ -87,8 +64,7 @@ public interface RepositoryMethodContext {
 	 * The method object represents the method as being invoked on the repository interface. It doesn't match the backing
 	 * repository implementation in case the method invocation is delegated to an implementation method.
 	 *
-	 * @return the current method.
+	 * @return the current method, will never be {@literal null}.
 	 */
 	Method getMethod();
-
 }

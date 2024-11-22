@@ -57,6 +57,8 @@ import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.core.NamedQueries;
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.repository.core.RepositoryMetadata;
+import org.springframework.data.repository.core.RepositoryMethodContext;
+import org.springframework.data.repository.core.RepositoryMethodContextHolder;
 import org.springframework.data.repository.core.support.DummyRepositoryFactory.MyRepositoryQuery;
 import org.springframework.data.repository.core.support.RepositoryComposition.RepositoryFragments;
 import org.springframework.data.repository.core.support.RepositoryMethodInvocationListener.RepositoryMethodInvocation;
@@ -251,11 +253,10 @@ class RepositoryFactorySupportUnitTests {
 	@Test // GH-3090
 	void capturesRepositoryMetadata() {
 
-		record Metadata(RepositoryMethodContext context, MethodInvocation methodInvocation) {
-		}
+		record Metadata(RepositoryMethodContext context, MethodInvocation methodInvocation) {}
 
 		when(factory.queryOne.execute(any(Object[].class)))
-				.then(invocation -> new Metadata(RepositoryMethodContext.currentMethod(),
+				.then(invocation -> new Metadata(RepositoryMethodContextHolder.getContext(),
 						ExposeInvocationInterceptor.currentInvocation()));
 
 		factory.setExposeMetadata(true);
@@ -267,7 +268,7 @@ class RepositoryFactorySupportUnitTests {
 
 		Metadata metadata = (Metadata) metadataByLastname;
 		assertThat(metadata.context().getMethod().getName()).isEqualTo("findMetadataByLastname");
-		assertThat(metadata.context().getRepository().getDomainType()).isEqualTo(Object.class);
+		assertThat(metadata.context().getMetadata().getDomainType()).isEqualTo(Object.class);
 		assertThat(metadata.methodInvocation().getMethod().getName()).isEqualTo("findMetadataByLastname");
 	}
 
@@ -278,7 +279,7 @@ class RepositoryFactorySupportUnitTests {
 		}
 
 		when(factory.queryOne.execute(any(Object[].class)))
-				.then(invocation -> new Metadata(RepositoryMethodContext.currentMethod(),
+				.then(invocation -> new Metadata(RepositoryMethodContextHolder.getContext(),
 						ExposeInvocationInterceptor.currentInvocation()));
 
 		var repository = factory.getRepository(ObjectRepository.class, new RepositoryMetadataAccess() {});
@@ -288,7 +289,7 @@ class RepositoryFactorySupportUnitTests {
 
 		Metadata metadata = (Metadata) metadataByLastname;
 		assertThat(metadata.context().getMethod().getName()).isEqualTo("findMetadataByLastname");
-		assertThat(metadata.context().getRepository().getDomainType()).isEqualTo(Object.class);
+		assertThat(metadata.context().getMetadata().getDomainType()).isEqualTo(Object.class);
 		assertThat(metadata.methodInvocation().getMethod().getName()).isEqualTo("findMetadataByLastname");
 	}
 
@@ -605,6 +606,7 @@ class RepositoryFactorySupportUnitTests {
 
 	}
 
+	@SuppressWarnings("removal")
 	interface ConvertingRepository extends Repository<Object, Long> {
 
 		Set<String> convertListToStringSet();

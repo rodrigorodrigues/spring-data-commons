@@ -9,6 +9,7 @@ import org.springframework.core.convert.Property;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.data.mapping.PropertyPath;
 import org.springframework.data.querydsl.EntityPathResolver;
+import org.springframework.data.util.ReflectionUtils;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
@@ -54,7 +55,7 @@ public interface QuerydslPredicateBuilderCustomizer {
 
         TypeDescriptor result = descriptor == null //
                 ? TypeDescriptor
-                .nested(org.springframework.data.util.ReflectionUtils.findRequiredField(owningType, leafProperty), 0)
+                .nested(ReflectionUtils.getRequiredField(owningType, leafProperty), 0)
                 : TypeDescriptor
                 .nested(new Property(owningType, descriptor.getReadMethod(), descriptor.getWriteMethod(), leafProperty), 0);
 

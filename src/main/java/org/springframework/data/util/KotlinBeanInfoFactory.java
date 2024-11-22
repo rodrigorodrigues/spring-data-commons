@@ -40,6 +40,7 @@ import org.springframework.core.KotlinDetector;
 import org.springframework.core.Ordered;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -67,6 +68,27 @@ public class KotlinBeanInfoFactory implements BeanInfoFactory, Ordered {
 		KClass<?> kotlinClass = JvmClassMappingKt.getKotlinClass(beanClass);
 		Collection<KCallable<?>> members = kotlinClass.getMembers();
 		Map<String, PropertyDescriptor> descriptors = new LinkedHashMap<>(members.size(), 1.f);
+
+		collectKotlinProperties(beanClass, members, descriptors);
+		collectBasicJavaProperties(beanClass, descriptors);
+
+		PropertyDescriptor[] propertyDescriptors = descriptors.values().toArray(new PropertyDescriptor[0]);
+
+		return new SimpleBeanInfo() {
+			@Override
+			public BeanDescriptor getBeanDescriptor() {
+				return new BeanDescriptor(beanClass);
+			}
+
+			@Override
+			public PropertyDescriptor[] getPropertyDescriptors() {
+				return propertyDescriptors;
+			}
+		};
+	}
+
+	private static void collectKotlinProperties(Class<?> beanClass, Collection<KCallable<?>> members,
+			Map<String, PropertyDescriptor> descriptors) throws IntrospectionException {
 
 		for (KCallable<?> member : members) {
 
@@ -99,6 +121,10 @@ public class KotlinBeanInfoFactory implements BeanInfoFactory, Ordered {
 				descriptors.put(property.getName(), new PropertyDescriptor(property.getName(), getter, setter));
 			}
 		}
+	}
+
+	private static void collectBasicJavaProperties(Class<?> beanClass, Map<String, PropertyDescriptor> descriptors)
+			throws IntrospectionException {
 
 		Class<?> javaClass = beanClass;
 		do {
@@ -112,25 +138,16 @@ public class KotlinBeanInfoFactory implements BeanInfoFactory, Ordered {
 
 			for (PropertyDescriptor descriptor : javaPropertyDescriptors) {
 
-				descriptor = new PropertyDescriptor(descriptor.getName(), specialize(beanClass, descriptor.getReadMethod()),
-						specialize(beanClass, descriptor.getWriteMethod()));
+				Method getter = specialize(beanClass, descriptor.getReadMethod());
+				Method setter = specialize(beanClass, descriptor.getWriteMethod());
+
+				if (!ObjectUtils.nullSafeEquals(descriptor.getReadMethod(), getter)
+						|| !ObjectUtils.nullSafeEquals(descriptor.getWriteMethod(), setter)) {
+					descriptor = new BasicPropertyDescriptor(descriptor.getName(), getter, setter);
+				}
 				descriptors.put(descriptor.getName(), descriptor);
 			}
 		}
-
-		PropertyDescriptor[] propertyDescriptors = descriptors.values().toArray(new PropertyDescriptor[0]);
-
-		return new SimpleBeanInfo() {
-			@Override
-			public BeanDescriptor getBeanDescriptor() {
-				return new BeanDescriptor(beanClass);
-			}
-
-			@Override
-			public PropertyDescriptor[] getPropertyDescriptors() {
-				return propertyDescriptors;
-			}
-		};
 	}
 
 	@Nullable
@@ -148,4 +165,44 @@ public class KotlinBeanInfoFactory implements BeanInfoFactory, Ordered {
 		return LOWEST_PRECEDENCE - 10; // leave some space for customizations.
 	}
 
+	/**
+	 * PropertyDescriptor for {@link KotlinBeanInfoFactory}, not performing any early type determination for
+	 * {@link #setReadMethod}/{@link #setWriteMethod}.
+	 *
+	 * @since 3.3.5
+	 */
+	private static class BasicPropertyDescriptor extends PropertyDescriptor {
+
+		private @Nullable Method readMethod;
+
+		private @Nullable Method writeMethod;
+
+		public BasicPropertyDescriptor(String propertyName, @Nullable Method readMethod, @Nullable Method writeMethod)
+				throws IntrospectionException {
+
+			super(propertyName, readMethod, writeMethod);
+		}
+
+		@Override
+		public void setReadMethod(@Nullable Method readMethod) {
+			this.readMethod = readMethod;
+		}
+
+		@Override
+		@Nullable
+		public Method getReadMethod() {
+			return this.readMethod;
+		}
+
+		@Override
+		public void setWriteMethod(@Nullable Method writeMethod) {
+			this.writeMethod = writeMethod;
+		}
+
+		@Override
+		@Nullable
+		public Method getWriteMethod() {
+			return this.writeMethod;
+		}
+	}
 }

@@ -17,6 +17,7 @@ package org.springframework.data.repository.query;
 
 import java.util.Collections;
 
+import org.springframework.data.spel.EvaluationContextProvider;
 import org.springframework.data.spel.ExpressionDependencies;
 import org.springframework.expression.EvaluationContext;
 
@@ -27,7 +28,10 @@ import org.springframework.expression.EvaluationContext;
  * @author Oliver Gierke
  * @author Christoph Strobl
  * @since 1.9
+ * @deprecated since 3.4 in favor of {@link QueryMethodValueEvaluationContextAccessor}.
  */
+@Deprecated(since = "3.4", forRemoval = true)
+@SuppressWarnings("removal")
 public interface QueryMethodEvaluationContextProvider {
 
 	QueryMethodEvaluationContextProvider DEFAULT = new ExtensionAwareQueryMethodEvaluationContextProvider(
@@ -51,4 +55,9 @@ public interface QueryMethodEvaluationContextProvider {
 	 */
 	<T extends Parameters<?, ?>> EvaluationContext getEvaluationContext(T parameters, Object[] parameterValues,
 			ExpressionDependencies dependencies);
+
+	/**
+	 * @return the underlying {@link EvaluationContextProvider}.
+	 */
+	EvaluationContextProvider getEvaluationContextProvider();
 }

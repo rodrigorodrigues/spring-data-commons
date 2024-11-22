@@ -23,13 +23,32 @@ interface CustomizedUserRepository {
 ----
 class CustomizedUserRepositoryImpl implements CustomizedUserRepository {
 
+  @Override
   public void someCustomMethod(User user) {
     // Your custom implementation
   }
 }
 ----
 
-NOTE: The most important part of the class name that corresponds to the fragment interface is the `Impl` postfix.
+[NOTE]
+====
+The most important part of the class name that corresponds to the fragment interface is the `Impl` postfix.
+You can customize the store-specific postfix by setting `@Enable<StoreModule>Repositories(repositoryImplementationPostfix = …)`.
+====
+
+[WARNING]
+====
+Historically, Spring Data custom repository implementation discovery followed a
+https://docs.spring.io/spring-data/commons/docs/1.9.0.RELEASE/reference/html/#repositories.single-repository-behaviour[naming pattern]
+that derived the custom implementation class name from the repository allowing effectively a single custom implementation.
+
+A type located in the same package as the repository interface, matching _repository interface name_ followed by _implementation postfix_,
+is considered a custom implementation and will be treated as a custom implementation.
+A class following that name can lead to undesired behavior.
+
+We consider the single-custom implementation naming deprecated and recommend not using this pattern.
+Instead, migrate to a fragment-based programming model.
+====
 
 The implementation itself does not depend on Spring Data and can be a regular Spring bean.
 Consequently, you can use standard dependency injection behavior to inject references to other beans (such as a `JdbcTemplate`), take part in aspects, and so on.
@@ -63,6 +82,7 @@ interface HumanRepository {
 
 class HumanRepositoryImpl implements HumanRepository {
 
+  @Override
   public void someHumanMethod(User user) {
     // Your custom implementation
   }
@@ -77,10 +97,12 @@ interface ContactRepository {
 
 class ContactRepositoryImpl implements ContactRepository {
 
+  @Override
   public void someContactMethod(User user) {
     // Your custom implementation
   }
 
+  @Override
   public User anotherContactMethod(User user) {
     // Your custom implementation
   }
@@ -115,6 +137,7 @@ interface CustomizedSave<T> {
 
 class CustomizedSaveImpl<T> implements CustomizedSave<T> {
 
+  @Override
   public <S extends T> S save(S entity) {
     // Your custom implementation
   }
@@ -271,7 +294,7 @@ package com.acme.search;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Limit;
-import org.springframework.data.repository.core.support.RepositoryMethodContext;
+import org.springframework.data.repository.core.RepositoryMethodContext;
 
 class DefaultSearchExtension<T> implements SearchExtension<T> {
 
@@ -281,8 +304,9 @@ class DefaultSearchExtension<T> implements SearchExtension<T> {
         this.service = service;
     }
 
+    @Override
     public List<T> search(String text, Limit limit) {
-        return search(RepositoryMethodContext.currentMethod(), text, limit);
+        return search(RepositoryMethodContext.getContext(), text, limit);
     }
 
     List<T> search(RepositoryMethodContext metadata, String text, Limit limit) {
@@ -297,12 +321,12 @@ class DefaultSearchExtension<T> implements SearchExtension<T> {
 }
 ----
 
-In the example above `RepositoryMethodContext.currentMethod()` is used to retrieve metadata for the actual method invocation.
+In the example above `RepositoryMethodContext.getContext()` is used to retrieve metadata for the actual method invocation.
 `RepositoryMethodContext` exposes information attached to the repository such as the domain type.
 In this case we use the repository domain type to identify the name of the index to be searched.
 
 Exposing invocation metadata is costly, hence it is disabled by default.
-To access `RepositoryMethodContext.currentMethod()` you need to advise the repository factory responsible for creating the actual repository to expose method metadata.
+To access `RepositoryMethodContext.getContext()` you need to advise the repository factory responsible for creating the actual repository to expose method metadata.
 
 .Expose Repository Metadata
 [tabs]
@@ -319,7 +343,7 @@ package com.acme.search;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.repository.core.support.RepositoryMetadataAccess;
-import org.springframework.data.repository.core.support.RepositoryMethodContext;
+import org.springframework.data.repository.core.RepositoryMethodContext;
 
 class DefaultSearchExtension<T> implements SearchExtension<T>, RepositoryMetadataAccess {
 
@@ -411,6 +435,7 @@ class MyRepositoryImpl<T, ID>
     this.entityManager = entityManager;
   }
 
+  @Override
   @Transactional
   public <S extends T> S save(S entity) {
     // implementation goes here

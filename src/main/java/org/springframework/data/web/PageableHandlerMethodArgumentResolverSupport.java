@@ -34,8 +34,10 @@ import org.springframework.util.StringUtils;
 /**
  * Base class providing methods for handler method argument resolvers to create paging information from web requests and
  * thus allows injecting {@link Pageable} instances into controller methods. Request properties to be parsed can be
- * configured. Default configuration uses request parameters beginning with
- * {@link #DEFAULT_PAGE_PARAMETER}{@link #DEFAULT_QUALIFIER_DELIMITER}.
+ * configured defaulting to {@code page} for the page number and {@code size} for the page size.
+ * <p>
+ * Parameters can be {@link #setPrefix(String) prefixed} to disambiguate from other parameters in the request if
+ * necessary.
  *
  * @author Mark Paluch
  * @author Vedran Pavic
@@ -154,7 +156,7 @@ public abstract class PageableHandlerMethodArgumentResolverSupport {
 	 *
 	 * @param prefix the prefix to be used or {@literal null} to reset to the default.
 	 */
-	public void setPrefix(String prefix) {
+	public void setPrefix(@Nullable String prefix) {
 		this.prefix = prefix == null ? DEFAULT_PREFIX : prefix;
 	}
 
@@ -164,7 +166,7 @@ public abstract class PageableHandlerMethodArgumentResolverSupport {
 	 *
 	 * @param qualifierDelimiter the delimiter to be used or {@literal null} to reset to the default.
 	 */
-	public void setQualifierDelimiter(String qualifierDelimiter) {
+	public void setQualifierDelimiter(@Nullable String qualifierDelimiter) {
 		this.qualifierDelimiter = qualifierDelimiter == null ? DEFAULT_QUALIFIER_DELIMITER : qualifierDelimiter;
 	}
 
@@ -199,7 +201,7 @@ public abstract class PageableHandlerMethodArgumentResolverSupport {
 		Optional<Integer> page = parseAndApplyBoundaries(pageString, Integer.MAX_VALUE, true);
 		Optional<Integer> pageSize = parseAndApplyBoundaries(pageSizeString, maxPageSize, false);
 
-		if (!(page.isPresent() && pageSize.isPresent()) && !defaultOrFallback.isPresent()) {
+		if (!(page.isPresent() && pageSize.isPresent()) && defaultOrFallback.isEmpty()) {
 			return Pageable.unpaged();
 		}
 
@@ -211,7 +213,7 @@ public abstract class PageableHandlerMethodArgumentResolverSupport {
 		// Limit lower bound
 		ps = ps < 1 ? defaultOrFallback.map(Pageable::getPageSize).orElseThrow(IllegalStateException::new) : ps;
 		// Limit upper bound
-		ps = ps > maxPageSize ? maxPageSize : ps;
+		ps = Math.min(ps, maxPageSize);
 
 		return PageRequest.of(p, ps, defaultOrFallback.map(Pageable::getSort).orElseGet(Sort::unsorted));
 	}
@@ -287,7 +289,7 @@ public abstract class PageableHandlerMethodArgumentResolverSupport {
 
 		try {
 			int parsed = Integer.parseInt(parameter) - (oneIndexedParameters && shiftIndex ? 1 : 0);
-			return Optional.of(parsed < 0 ? 0 : parsed > upper ? upper : parsed);
+			return Optional.of(parsed < 0 ? 0 : Math.min(parsed, upper));
 		} catch (NumberFormatException e) {
 			return Optional.of(0);
 		}

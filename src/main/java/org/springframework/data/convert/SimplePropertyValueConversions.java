@@ -16,7 +16,9 @@
 package org.springframework.data.convert;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.InitializingBean;
@@ -27,7 +29,7 @@ import org.springframework.util.Assert;
 
 /**
  * {@link PropertyValueConversions} implementation allowing a {@link PropertyValueConverterFactory} creating
- * {@link PropertyValueConverter converters} to be chosen. Activating {@link #setConverterCacheEnabled(boolean) cahing}
+ * {@link PropertyValueConverter converters} to be chosen. Activating {@link #setConverterCacheEnabled(boolean) caching}
  * allows converters to be reused.
  * <p>
  * Providing a {@link SimplePropertyValueConverterRegistry} adds path configured converter instances.
@@ -50,6 +52,23 @@ public class SimplePropertyValueConversions implements PropertyValueConversions,
 	private @Nullable PropertyValueConverterFactory converterFactory;
 
 	private @Nullable ValueConverterRegistry<?> valueConverterRegistry;
+
+	private volatile Map<PersistentProperty<?>, PropertyValueConverter<?, ?, ?>> converterCache = new HashMap<>();
+
+	@SuppressWarnings("rawtypes")
+	enum NoOpConverter implements PropertyValueConverter {
+		INSTANCE;
+
+		@Override
+		public Object read(Object value, ValueConversionContext context) {
+			return null;
+		}
+
+		@Override
+		public Object write(Object value, ValueConversionContext context) {
+			return null;
+		}
+	}
 
 	/**
 	 * Set the {@link PropertyValueConverterFactory} responsible for creating the actual {@link PropertyValueConverter}.
@@ -129,18 +148,51 @@ public class SimplePropertyValueConversions implements PropertyValueConversions,
 	 */
 	@Override
 	public boolean hasValueConverter(PersistentProperty<?> property) {
-		return requireConverterFactory().getConverter(property) != null;
+		return doGetConverter(property) != null;
 	}
 
 	@Override
 	public <DV, SV, P extends PersistentProperty<P>, D extends ValueConversionContext<P>> PropertyValueConverter<DV, SV, D> getValueConverter(
 			P property) {
 
-		PropertyValueConverter<DV, SV, D> converter = requireConverterFactory().getConverter(property);
+		PropertyValueConverter<DV, SV, D> converter = doGetConverter(property);
 
 		Assert.notNull(converter, String.format("No PropertyValueConverter registered for %s", property));
 
 		return converter;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Nullable
+	private <DV, SV, P extends PersistentProperty<P>, D extends ValueConversionContext<P>> PropertyValueConverter<DV, SV, D> doGetConverter(
+			PersistentProperty<?> property) {
+
+		PropertyValueConverter<?, ?, ?> converter = converterCache.get(property);
+
+		if (converter == null) {
+
+			synchronized (this) {
+
+				PropertyValueConverter<?, ?, ?> fromCache = converterCache.get(property);
+				if (fromCache != null) {
+					converter = fromCache;
+				} else {
+
+					converter = requireConverterFactory().getConverter(property);
+
+					Map<PersistentProperty<?>, PropertyValueConverter<?, ?, ?>> converterCache = new HashMap<>(
+							this.converterCache);
+					converterCache.put(property, converter != null ? converter : NoOpConverter.INSTANCE);
+					this.converterCache = converterCache;
+				}
+			}
+		}
+
+		if (converter == NoOpConverter.INSTANCE) {
+			return null;
+		}
+
+		return (PropertyValueConverter<DV, SV, D>) converter;
 	}
 
 	/**

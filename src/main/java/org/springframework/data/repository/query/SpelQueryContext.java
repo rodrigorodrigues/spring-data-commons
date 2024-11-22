@@ -58,7 +58,10 @@ import org.springframework.util.Assert;
  * @author Gerrit Meier
  * @author Mark Paluch
  * @since 2.1
+ * @deprecated since 3.3, use {@link ValueExpressionQueryRewriter} instead.
  */
+@SuppressWarnings("removal")
+@Deprecated(since = "3.3", forRemoval = true)
 public class SpelQueryContext {
 
 	private static final String SPEL_PATTERN_STRING = "([:?])#\\{([^}]+)}";
