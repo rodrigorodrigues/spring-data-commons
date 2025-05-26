@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,20 @@
  */
 package org.springframework.data.repository.core.support;
 
-import static org.springframework.util.ReflectionUtils.*;
-
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.repository.core.RepositoryInformationSupport;
 import org.springframework.data.repository.core.RepositoryMetadata;
+import org.springframework.data.util.Lazy;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
+import org.springframework.util.ReflectionUtils;
 
 /**
  * Default implementation of {@link RepositoryInformation}.
@@ -42,6 +45,7 @@ class DefaultRepositoryInformation extends RepositoryInformationSupport implemen
 
 	private final RepositoryComposition composition;
 	private final RepositoryComposition baseComposition;
+	private final Lazy<RepositoryComposition> fullComposition;
 
 	/**
 	 * Creates a new {@link DefaultRepositoryMetadata} for the given repository interface and repository base class.
@@ -60,6 +64,8 @@ class DefaultRepositoryInformation extends RepositoryInformationSupport implemen
 		this.baseComposition = RepositoryComposition.of(RepositoryFragment.structural(repositoryBaseClass)) //
 				.withArgumentConverter(composition.getArgumentConverter()) //
 				.withMethodLookup(composition.getMethodLookup());
+
+		this.fullComposition = Lazy.of(() -> composition.append(baseComposition.getFragments()));
 	}
 
 	@Override
@@ -78,10 +84,11 @@ class DefaultRepositoryInformation extends RepositoryInformationSupport implemen
 		return cacheAndReturn(method, baseComposition.findMethod(method).orElse(method));
 	}
 
-	private Method cacheAndReturn(Method key, Method value) {
+	@Contract("_, null -> null; _, !null -> !null")
+	private @Nullable Method cacheAndReturn(Method key, @Nullable Method value) {
 
 		if (value != null) {
-			makeAccessible(value);
+			ReflectionUtils.makeAccessible(value);
 		}
 
 		methodCache.put(key, value);
@@ -101,8 +108,35 @@ class DefaultRepositoryInformation extends RepositoryInformationSupport implemen
 	}
 
 	@Override
+	protected boolean isQueryMethodCandidate(Method method) {
+
+		boolean queryMethodCandidate = super.isQueryMethodCandidate(method);
+		if(!isQueryAnnotationPresentOn(method)) {
+			return queryMethodCandidate;
+		}
+
+		if (!queryMethodCandidate) {
+			return false;
+		}
+
+		for (RepositoryFragment<?> fragment : getFragments()) {
+
+			if (fragment.getImplementation().isPresent() && fragment.hasMethod(method)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	@Override
 	public Set<RepositoryFragment<?>> getFragments() {
 		return composition.getFragments().toSet();
+	}
+
+	@Override
+	public RepositoryComposition getRepositoryComposition() {
+		return fullComposition.get();
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2024 the original author or authors.
+ * Copyright 2017-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,16 +22,19 @@ import example.SampleInterface;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Unit tests for {@link ProxyingHandlerMethodArgumentResolver}.
  *
  * @author Oliver Gierke
+ * @author Chris Bono
  * @soundtrack Karlijn Langendijk & Sönke Meinen - Englishman In New York (Sting,
  *             https://www.youtube.com/watch?v=O7LZsqrnaaA)
  */
@@ -41,7 +44,7 @@ class ProxyingHandlerMethodArgumentResolverUnitTests {
 			() -> new DefaultConversionService(), true);
 
 	@Test // DATACMNS-776
-	void supportAnnotatedInterface() throws Exception {
+	void supportAnnotatedInterface() {
 
 		var parameter = getParameter("with", AnnotatedInterface.class);
 
@@ -49,7 +52,7 @@ class ProxyingHandlerMethodArgumentResolverUnitTests {
 	}
 
 	@Test // DATACMNS-776
-	void supportsUnannotatedInterfaceFromUserPackage() throws Exception {
+	void supportsUnannotatedInterfaceFromUserPackage() {
 
 		var parameter = getParameter("with", SampleInterface.class);
 
@@ -57,7 +60,7 @@ class ProxyingHandlerMethodArgumentResolverUnitTests {
 	}
 
 	@Test // DATACMNS-776
-	void doesNotSupportUnannotatedInterfaceFromSpringNamespace() throws Exception {
+	void doesNotSupportUnannotatedInterfaceFromSpringNamespace() {
 
 		var parameter = getParameter("with", UnannotatedInterface.class);
 
@@ -65,7 +68,7 @@ class ProxyingHandlerMethodArgumentResolverUnitTests {
 	}
 
 	@Test // DATACMNS-776
-	void doesNotSupportCoreJavaType() throws Exception {
+	void doesNotSupportCoreJavaType() {
 
 		var parameter = getParameter("with", List.class);
 
@@ -73,7 +76,7 @@ class ProxyingHandlerMethodArgumentResolverUnitTests {
 	}
 
 	@Test // GH-2937
-	void doesNotSupportForeignSpringAnnotations() throws Exception {
+	void doesNotSupportForeignSpringAnnotations() {
 
 		var parameter = getParameter("withForeignAnnotation", SampleInterface.class);
 
@@ -81,11 +84,35 @@ class ProxyingHandlerMethodArgumentResolverUnitTests {
 	}
 
 	@Test // GH-2937
-	void doesSupportAtModelAttribute() throws Exception {
+	void doesSupportAtModelAttribute() {
 
 		var parameter = getParameter("withModelAttribute", SampleInterface.class);
 
 		assertThat(resolver.supportsParameter(parameter)).isTrue();
+	}
+
+	@Test // GH-3258
+	void doesNotSupportAtModelAttributeForMultipartParam() {
+
+		var parameter = getParameter("withModelAttributeMultipart", MultipartFile.class);
+
+		assertThat(resolver.supportsParameter(parameter)).isFalse();
+	}
+
+	@Test // GH-3258
+	void doesSupportAtProjectedPayload() {
+
+		var parameter = getParameter("withProjectedPayload", SampleInterface.class);
+
+		assertThat(resolver.supportsParameter(parameter)).isTrue();
+	}
+
+	@Test // GH-3258
+	void doesNotSupportAtProjectedPayloadForMultipartParam() {
+
+		var parameter = getParameter("withProjectedPayloadMultipart", MultipartFile.class);
+
+		assertThat(resolver.supportsParameter(parameter)).isFalse();
 	}
 
 	private static MethodParameter getParameter(String methodName, Class<?> parameterType) {
@@ -112,5 +139,12 @@ class ProxyingHandlerMethodArgumentResolverUnitTests {
 		void withForeignAnnotation(@Autowired SampleInterface param);
 
 		void withModelAttribute(@ModelAttribute SampleInterface param);
+
+		void withModelAttributeMultipart(@ModelAttribute MultipartFile file);
+
+		void withProjectedPayload(@ProjectedPayload SampleInterface param);
+
+		void withProjectedPayloadMultipart(@ProjectedPayload MultipartFile file);
 	}
+
 }

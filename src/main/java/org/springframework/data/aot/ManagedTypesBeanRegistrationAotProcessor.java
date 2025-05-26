@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.aot.generate.GenerationContext;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanFactory;
@@ -29,12 +31,15 @@ import org.springframework.beans.factory.aot.BeanRegistrationAotProcessor;
 import org.springframework.beans.factory.config.ConstructorArgumentValues.ValueHolder;
 import org.springframework.beans.factory.support.RegisteredBean;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.context.EnvironmentAware;
 import org.springframework.core.ResolvableType;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.data.domain.ManagedTypes;
+import org.springframework.data.util.Lazy;
 import org.springframework.data.util.QTypeContributor;
 import org.springframework.data.util.TypeContributor;
 import org.springframework.data.util.TypeUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
@@ -46,10 +51,11 @@ import org.springframework.util.StringUtils;
  * @author John Blum
  * @since 3.0
  */
-public class ManagedTypesBeanRegistrationAotProcessor implements BeanRegistrationAotProcessor {
+public class ManagedTypesBeanRegistrationAotProcessor implements BeanRegistrationAotProcessor, EnvironmentAware {
 
 	private final Log logger = LogFactory.getLog(getClass());
 	private @Nullable String moduleIdentifier;
+	private Lazy<Environment> environment = Lazy.of(StandardEnvironment::new);
 
 	public void setModuleIdentifier(@Nullable String moduleIdentifier) {
 		this.moduleIdentifier = moduleIdentifier;
@@ -61,14 +67,20 @@ public class ManagedTypesBeanRegistrationAotProcessor implements BeanRegistratio
 	}
 
 	@Override
-	public BeanRegistrationAotContribution processAheadOfTime(RegisteredBean registeredBean) {
+	public void setEnvironment(Environment environment) {
+		this.environment = Lazy.of(() -> environment);
+	}
+
+	@Override
+	public @Nullable BeanRegistrationAotContribution processAheadOfTime(RegisteredBean registeredBean) {
 
 		if (!isMatch(registeredBean.getBeanClass(), registeredBean.getBeanName())) {
 			return null;
 		}
 
 		BeanFactory beanFactory = registeredBean.getBeanFactory();
-		return contribute(AotContext.from(beanFactory), resolveManagedTypes(registeredBean), registeredBean);
+		return contribute(AotContext.from(beanFactory, this.environment.get()), resolveManagedTypes(registeredBean),
+				registeredBean);
 	}
 
 	private ManagedTypes resolveManagedTypes(RegisteredBean registeredBean) {
@@ -78,9 +90,9 @@ public class ManagedTypesBeanRegistrationAotProcessor implements BeanRegistratio
 		if (beanDefinition.hasConstructorArgumentValues()) {
 
 			ValueHolder indexedArgumentValue = beanDefinition.getConstructorArgumentValues().getIndexedArgumentValue(0, null);
-			Object value = indexedArgumentValue.getValue();
 
-			if (value instanceof Collection<?> values && values.stream().allMatch(it -> it instanceof Class)) {
+			if (indexedArgumentValue != null && indexedArgumentValue.getValue() instanceof Collection<?> values
+					&& values.stream().allMatch(it -> it instanceof Class)) {
 				return ManagedTypes.fromIterable((Collection<Class<?>>) values);
 			}
 		}
@@ -115,7 +127,6 @@ public class ManagedTypesBeanRegistrationAotProcessor implements BeanRegistratio
 	 * @param managedTypes never {@literal null}.
 	 * @return new instance of {@link BeanRegistrationAotContribution} or {@literal null} if nothing to do.
 	 */
-	@Nullable
 	protected BeanRegistrationAotContribution contribute(AotContext aotContext, ManagedTypes managedTypes,
 			RegisteredBean registeredBean) {
 		return new ManagedTypesRegistrationAotContribution(managedTypes, registeredBean, this::contributeType);

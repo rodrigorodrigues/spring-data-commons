@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 the original author or authors.
+ * Copyright 2023-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,14 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.mapping.InstanceCreatorMetadata;
 import org.springframework.data.mapping.Parameter;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.PreferredConstructor;
 import org.springframework.data.mapping.model.KotlinValueUtils.ValueBoxing;
 import org.springframework.data.util.ReflectionUtils;
-import org.springframework.lang.Nullable;
 
 /**
  * Delegate to allocate instantiation arguments and to resolve the actual constructor to call for inline/value class
@@ -50,7 +51,7 @@ class KotlinInstantiationDelegate {
 	private final KFunction<?> constructor;
 	private final List<KParameter> kParameters;
 	private final Map<KParameter, Integer> indexByKParameter;
-	private final List<Function<Object, Object>> wrappers = new ArrayList<>();
+	private final List<Function<@Nullable Object, @Nullable Object>> wrappers = new ArrayList<>();
 	private final Constructor<?> constructorToInvoke;
 	private final boolean hasDefaultConstructorMarker;
 
@@ -101,14 +102,9 @@ class KotlinInstantiationDelegate {
 
 	/**
 	 * Extract the actual construction arguments for a direct constructor call.
-	 *
-	 * @param params
-	 * @param entityCreator
-	 * @param provider
-	 * @return
-	 * @param <P>
 	 */
-	public <P extends PersistentProperty<P>> Object[] extractInvocationArguments(Object[] params,
+	@SuppressWarnings("NullAway")
+	public <P extends PersistentProperty<P>> void extractInvocationArguments(@Nullable Object[] params,
 			@Nullable InstanceCreatorMetadata<P> entityCreator, ParameterValueProvider<P> provider) {
 
 		if (entityCreator == null) {
@@ -155,8 +151,6 @@ class KotlinInstantiationDelegate {
 		for (int i = 0; i < defaulting.length; i++) {
 			params[userParameterCount + i] = defaulting[i];
 		}
-
-		return params;
 	}
 
 	/**
@@ -212,9 +206,9 @@ class KotlinInstantiationDelegate {
 				if ((detectedConstructor.getParameterCount() + syntheticParameters) != candidate.getParameterCount()) {
 					continue;
 				}
-			} else {
+			} else if (kotlinFunction != null) {
 
-				int optionalParameterCount = (int) kotlinFunction.getParameters().stream().filter(it -> it.isOptional())
+				int optionalParameterCount = (int) kotlinFunction.getParameters().stream().filter(KParameter::isOptional)
 						.count();
 				int syntheticParameters = KotlinDefaultMask.getExactMaskCount(optionalParameterCount);
 

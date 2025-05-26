@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024 the original author or authors.
+ * Copyright 2016-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,11 @@
  */
 package org.springframework.data.mapping;
 
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 
 /**
@@ -41,9 +43,9 @@ public final class Alias {
 	@SuppressWarnings("null") //
 	public static final Alias NONE = new Alias(null);
 
-	private final Object value;
+	private final @Nullable Object value;
 
-	private Alias(Object value) {
+	private Alias(@Nullable Object value) {
 		this.value = value;
 	}
 
@@ -86,6 +88,7 @@ public final class Alias {
 	 * @param other must not be {@literal null}.
 	 * @return {@literal true} if this value is present but different from the {@code other} value.
 	 */
+	@SuppressWarnings("NullAway")
 	public boolean isPresentButDifferent(Alias other) {
 
 		Assert.notNull(other, "Other alias must not be null");
@@ -99,16 +102,18 @@ public final class Alias {
 	 * @param that the other value, may be {@literal null}.
 	 * @return {@literal true} if this alias has a value and it equals to {@code that}.
 	 */
+	@SuppressWarnings("NullAway")
 	public boolean hasValue(Object that) {
-		return value != null && value.equals(that);
+		return isPresent() && value.equals(that);
 	}
 
 	/**
-	 * Returns whether the the current alias is present and has the same value as the given {@link Alias}.
+	 * Returns whether the current alias is present and has the same value as the given {@link Alias}.
 	 *
 	 * @param other the other {@link Alias}
 	 * @return {@literal true} if there's an alias value present and its equal to the one in the given {@link Alias}.
 	 */
+	@SuppressWarnings("NullAway")
 	public boolean hasSamePresentValueAs(Alias other) {
 		return isPresent() && value.equals(other.value);
 	}
@@ -118,6 +123,14 @@ public final class Alias {
 	 */
 	public boolean isPresent() {
 		return value != null;
+	}
+
+	/**
+	 * @return {@literal true} if this {@link Alias} does not contain a value.
+	 * @since 4.0
+	 */
+	public boolean isEmpty() {
+		return value == null;
 	}
 
 	/**
@@ -135,13 +148,25 @@ public final class Alias {
 		return isPresent() && type.isInstance(value) ? (T) value : null;
 	}
 
-	@Override
-	public String toString() {
-		return isPresent() ? value.toString() : "NONE";
-	}
-
+	@Nullable
 	public Object getValue() {
 		return this.value;
+	}
+
+	/**
+	 * Retrieve the required value or throw {@link NoSuchElementException} if the value is {@link #isEmpty() absent}.
+	 *
+	 * @return the required value.
+	 */
+	public Object getRequiredValue() {
+
+		Object value = getValue();
+
+		if (value == null) {
+			throw new NoSuchElementException("No value present");
+		}
+
+		return value;
 	}
 
 	@Override
@@ -161,5 +186,11 @@ public final class Alias {
 	@Override
 	public int hashCode() {
 		return Objects.hashCode(value);
+	}
+
+	@Override
+	@SuppressWarnings("NullAway")
+	public String toString() {
+		return isPresent() ? value.toString() : "NONE";
 	}
 }

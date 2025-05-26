@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import java.util.Map;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 
@@ -43,9 +43,8 @@ class MapAccessingMethodInterceptor implements MethodInterceptor {
 		this.map = map;
 	}
 
-	@Nullable
 	@Override
-	public Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
+	public @Nullable Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
 
 		Method method = invocation.getMethod();
 

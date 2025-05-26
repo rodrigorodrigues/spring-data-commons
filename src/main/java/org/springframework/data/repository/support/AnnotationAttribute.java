@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package org.springframework.data.repository.support;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Optional;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -96,7 +98,7 @@ class AnnotationAttribute {
 	 * @param annotation must not be {@literal null}.
 	 * @return
 	 */
-	public Object getValueFrom(Annotation annotation) {
+	public @Nullable Object getValueFrom(Annotation annotation) {
 
 		Assert.notNull(annotation, "Annotation must not be null");
 		return attributeName.map(it -> AnnotationUtils.getValue(annotation, it))

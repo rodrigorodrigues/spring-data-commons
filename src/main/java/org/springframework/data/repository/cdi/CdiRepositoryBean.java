@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import java.util.stream.Stream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.log.LogMessage;
@@ -48,7 +49,6 @@ import org.springframework.data.repository.core.support.RepositoryComposition.Re
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
 import org.springframework.data.repository.core.support.RepositoryFragment;
 import org.springframework.data.util.Optionals;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -102,7 +102,7 @@ public abstract class CdiRepositoryBean<T> implements Bean<T>, PassivationCapabl
 
 		Assert.notNull(qualifiers, "Qualifiers must not be null");
 		Assert.notNull(beanManager, "BeanManager must not be null");
-		Assert.notNull(repositoryType, "Repoitory type must not be null");
+		Assert.notNull(repositoryType, "Repository type must not be null");
 		Assert.isTrue(repositoryType.isInterface(), "RepositoryType must be an interface");
 
 		this.qualifiers = qualifiers;
@@ -127,7 +127,7 @@ public abstract class CdiRepositoryBean<T> implements Bean<T>, PassivationCapabl
 
 		Assert.notNull(qualifiers, "Qualifiers must not be null");
 		Assert.notNull(beanManager, "BeanManager must not be null");
-		Assert.notNull(repositoryType, "Repoitory type must not be null");
+		Assert.notNull(repositoryType, "Repository type must not be null");
 		Assert.isTrue(repositoryType.isInterface(), "RepositoryType must be an interface");
 
 		this.qualifiers = qualifiers;
@@ -156,6 +156,7 @@ public abstract class CdiRepositoryBean<T> implements Bean<T>, PassivationCapabl
 		return StringUtils.collectionToDelimitedString(qualifierNames, ":") + ":" + repositoryType.getName();
 	}
 
+	@Override
 	@SuppressWarnings("rawtypes")
 	public Set<Type> getTypes() {
 
@@ -201,12 +202,14 @@ public abstract class CdiRepositoryBean<T> implements Bean<T>, PassivationCapabl
 		create(beanManager.createCreationalContext(this));
 	}
 
+	@Override
 	public final T create(@SuppressWarnings("null") CreationalContext<T> creationalContext) {
 
 		T repoInstance = this.repoInstance;
 
 		if (repoInstance != null) {
-			logger.debug(LogMessage.format("Returning eagerly created CDI repository instance for %s.", repositoryType.getName()));
+			logger.debug(
+					LogMessage.format("Returning eagerly created CDI repository instance for %s.", repositoryType.getName()));
 			return repoInstance;
 		}
 
@@ -217,6 +220,7 @@ public abstract class CdiRepositoryBean<T> implements Bean<T>, PassivationCapabl
 		return repoInstance;
 	}
 
+	@Override
 	public void destroy(@SuppressWarnings("null") T instance,
 			@SuppressWarnings("null") CreationalContext<T> creationalContext) {
 
@@ -228,14 +232,17 @@ public abstract class CdiRepositoryBean<T> implements Bean<T>, PassivationCapabl
 		creationalContext.release();
 	}
 
+	@Override
 	public Set<Annotation> getQualifiers() {
 		return qualifiers;
 	}
 
+	@Override
 	public String getName() {
 		return repositoryType.getName();
 	}
 
+	@Override
 	public Set<Class<? extends Annotation>> getStereotypes() {
 
 		return Arrays.stream(repositoryType.getAnnotations())//
@@ -244,10 +251,12 @@ public abstract class CdiRepositoryBean<T> implements Bean<T>, PassivationCapabl
 				.collect(Collectors.toSet());
 	}
 
+	@Override
 	public Class<?> getBeanClass() {
 		return repositoryType;
 	}
 
+	@Override
 	public boolean isAlternative() {
 		return isAnnotatedWith(repositoryType, Alternative.class);
 	}
@@ -256,14 +265,17 @@ public abstract class CdiRepositoryBean<T> implements Bean<T>, PassivationCapabl
 		return false;
 	}
 
+	@Override
 	public Set<InjectionPoint> getInjectionPoints() {
 		return Collections.emptySet();
 	}
 
+	@Override
 	public Class<? extends Annotation> getScope() {
 		return ApplicationScoped.class;
 	}
 
+	@Override
 	public String getId() {
 		return passivationId;
 	}
@@ -340,7 +352,7 @@ public abstract class CdiRepositoryBean<T> implements Bean<T>, PassivationCapabl
 		Stream<RepositoryFragmentConfiguration> fragmentConfigurations = context
 				.getRepositoryFragments(cdiRepositoryConfiguration, repositoryType);
 
-		return fragmentConfigurations.flatMap(it -> {
+		return fragmentConfigurations.filter(it -> it.getInterfaceName() != null).flatMap(it -> {
 
 			Class<Object> interfaceClass = (Class<Object>) lookupFragmentInterface(repositoryType, it.getInterfaceName());
 			Class<?> implementationClass = context.loadClass(it.getClassName());
@@ -357,8 +369,8 @@ public abstract class CdiRepositoryBean<T> implements Bean<T>, PassivationCapabl
 		return Arrays.stream(repositoryType.getInterfaces()) //
 				.filter(it -> it.getName().equals(interfaceName)) //
 				.findFirst() //
-				.orElseThrow(() -> new IllegalArgumentException(String.format("Did not find type %s in %s", interfaceName,
-						Arrays.asList(repositoryType.getInterfaces()))));
+				.orElseThrow(() -> new IllegalArgumentException(
+						String.format("Did not find type %s in %s", interfaceName, Arrays.asList(repositoryType.getInterfaces()))));
 	}
 
 	/**

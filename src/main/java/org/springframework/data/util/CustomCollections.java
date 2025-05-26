@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -47,14 +48,16 @@ import org.eclipse.collections.api.map.MapIterable;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.ImmutableSet;
 import org.eclipse.collections.api.set.MutableSet;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.ConditionalConverter;
 import org.springframework.core.convert.converter.ConditionalGenericConverter;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterRegistry;
 import org.springframework.core.io.support.SpringFactoriesLoader;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
@@ -199,9 +202,9 @@ public class CustomCollections {
 
 	private static class SearchableTypes {
 
-		private static final BiPredicate<Class<?>, Class<?>> EQUALS = (left, right) -> left.equals(right);
-		private static final BiPredicate<Class<?>, Class<?>> IS_ASSIGNABLE = (left, right) -> left.isAssignableFrom(right);
-		private static final Function<Class<?>, Boolean> IS_NOT_NULL = it -> it != null;
+		private static final BiPredicate<Class<?>, Class<?>> EQUALS = Object::equals;
+		private static final BiPredicate<Class<?>, Class<?>> IS_ASSIGNABLE = Class::isAssignableFrom;
+		private static final Function<Class<?>, Boolean> IS_NOT_NULL = Objects::nonNull;
 
 		private final Collection<Class<?>> types;
 
@@ -246,7 +249,7 @@ public class CustomCollections {
 
 			Supplier<String> message = () -> String.format("Type %s not contained in candidates %s", type, types);
 
-			return isOneOf(type, (l, r) -> l.isAssignableFrom(r), rejectNull(message));
+			return isOneOf(type, Class::isAssignableFrom, rejectNull(message));
 		}
 
 		/**
@@ -288,7 +291,9 @@ public class CustomCollections {
 
 				return candidate;
 			};
+
 		}
+
 	}
 
 	static class VavrCollections implements CustomCollectionRegistrar {
@@ -353,9 +358,9 @@ public class CustomCollections {
 						&& COLLECTIONS_AND_MAP.contains(targetType.getType());
 			}
 
-			@Nullable
+			@Contract("null, _, _ -> null; !null, _, _ -> !null")
 			@Override
-			public Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
+			public @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
 
 				if (source == null) {
 					return null;
@@ -375,6 +380,7 @@ public class CustomCollections {
 
 				throw new IllegalArgumentException("Unsupported Vavr collection " + source.getClass());
 			}
+
 		}
 
 		private enum JavaToVavrCollectionConverter implements ConditionalGenericConverter {
@@ -392,9 +398,9 @@ public class CustomCollections {
 				CONVERTIBLE_PAIRS = Collections.unmodifiableSet(pairs);
 			}
 
-			@NonNull
+
 			@Override
-			public java.util.Set<ConvertiblePair> getConvertibleTypes() {
+			public java.util.@NonNull Set<ConvertiblePair> getConvertibleTypes() {
 				return CONVERTIBLE_PAIRS;
 			}
 
@@ -415,9 +421,10 @@ public class CustomCollections {
 				return true;
 			}
 
-			@Nullable
+			@Contract("null, _, _ -> null; !null, _, _ -> !null")
 			@Override
-			public Object convert(@Nullable Object source, TypeDescriptor sourceDescriptor, TypeDescriptor targetDescriptor) {
+			public @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceDescriptor,
+					TypeDescriptor targetDescriptor) {
 
 				var targetType = targetDescriptor.getType();
 
@@ -450,7 +457,9 @@ public class CustomCollections {
 
 				return source;
 			}
+
 		}
+
 	}
 
 	static class EclipseCollections implements CustomCollectionRegistrar {
@@ -505,9 +514,9 @@ public class CustomCollections {
 						&& COLLECTIONS_AND_MAP.contains(targetType.getType());
 			}
 
-			@Nullable
+			@Contract("null -> null; !null -> !null")
 			@Override
-			public Object convert(@Nullable Object source) {
+			public @Nullable Object convert(@Nullable Object source) {
 
 				if (source instanceof ImmutableList) {
 					return ((ImmutableList<?>) source).toList();
@@ -527,6 +536,7 @@ public class CustomCollections {
 
 				return source;
 			}
+
 		}
 
 		enum JavaToEclipseConverter implements ConditionalGenericConverter {
@@ -555,9 +565,8 @@ public class CustomCollections {
 				CONVERTIBLE_PAIRS = Collections.unmodifiableSet(pairs);
 			}
 
-			@NonNull
 			@Override
-			public Set<ConvertiblePair> getConvertibleTypes() {
+			public @NonNull Set<ConvertiblePair> getConvertibleTypes() {
 				return CONVERTIBLE_PAIRS;
 			}
 
@@ -579,9 +588,10 @@ public class CustomCollections {
 				return true;
 			}
 
-			@Nullable
+			@Contract("null, _, _ -> null; !null, _ , _ -> !null")
 			@Override
-			public Object convert(@Nullable Object source, TypeDescriptor sourceDescriptor, TypeDescriptor targetDescriptor) {
+			public @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceDescriptor,
+					TypeDescriptor targetDescriptor) {
 
 				var targetType = targetDescriptor.getType();
 
@@ -635,5 +645,7 @@ public class CustomCollections {
 				return source;
 			}
 		}
+
 	}
+
 }

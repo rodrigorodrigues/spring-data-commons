@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,14 @@
 package org.springframework.data.projection;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,7 +36,6 @@ import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.ParserContext;
 import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -127,9 +128,8 @@ class SpelEvaluatingMethodInterceptor implements MethodInterceptor {
 		return Collections.unmodifiableMap(expressions);
 	}
 
-	@Nullable
 	@Override
-	public Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
+	public @Nullable Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
 
 		Expression expression = expressions.get(invocation.getMethod().hashCode());
 
@@ -188,7 +188,7 @@ class SpelEvaluatingMethodInterceptor implements MethodInterceptor {
 		@Override
 		public int hashCode() {
 			int result = ObjectUtils.nullSafeHashCode(target);
-			result = 31 * result + ObjectUtils.nullSafeHashCode(args);
+			result = 31 * result + Arrays.hashCode(args);
 			return result;
 		}
 

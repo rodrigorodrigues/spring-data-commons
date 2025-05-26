@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,14 @@ package org.springframework.data.spel.spi;
 import java.util.Collections;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
+import org.springframework.data.spel.ExtensionAwareEvaluationContextProvider;
 import org.springframework.expression.EvaluationContext;
-import org.springframework.lang.Nullable;
 
 /**
  * SPI to allow adding a set of properties and function definitions accessible via the root of an
- * {@link EvaluationContext} provided by an
- * {@link org.springframework.data.repository.query.ExtensionAwareQueryMethodEvaluationContextProvider}.
+ * {@link EvaluationContext} provided by an {@link ExtensionAwareEvaluationContextProvider}.
  * <p>
  * Extensions can be ordered by following Spring's {@link org.springframework.core.Ordered} conventions.
  *
@@ -61,8 +62,7 @@ public interface EvaluationContextExtension extends ExtensionIdAware {
 	 *
 	 * @return the root object to be exposed by the extension.
 	 */
-	@Nullable
-	default Object getRootObject() {
+	default @Nullable Object getRootObject() {
 		return null;
 	}
 }

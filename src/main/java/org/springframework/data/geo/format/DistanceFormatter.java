@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +22,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.Metric;
 import org.springframework.data.geo.Metrics;
 import org.springframework.format.Formatter;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.StringUtils;
 
 /**
@@ -57,15 +59,16 @@ public enum DistanceFormatter implements Converter<String, Distance>, Formatter<
 		SUPPORTED_METRICS = Collections.unmodifiableMap(metrics);
 	}
 
-	@Nullable
+	@Contract("null -> null; !null -> !null")
 	@Override
-	public final Distance convert(String source) {
+	public final @Nullable Distance convert(@Nullable String source) {
 		return source == null ? null : doConvert(source.trim().toLowerCase(Locale.US));
 	}
 
 	@Override
-	public String print(Distance distance, Locale locale) {
-		return distance == null ? null : String.format("%s%s", distance.getValue(), distance.getUnit().toLowerCase(locale));
+	public String print(@Nullable Distance distance, Locale locale) {
+		return distance == null ? "null"
+				: String.format("%s%s", distance.getValue(), distance.getUnit().toLowerCase(locale));
 	}
 
 	@Override
@@ -78,7 +81,6 @@ public enum DistanceFormatter implements Converter<String, Distance>, Formatter<
 	 * in the {@link #SUPPORTED_METRICS} map.
 	 *
 	 * @param source must not be {@literal null}.
-	 * @return
 	 */
 	private static Distance doConvert(String source) {
 
@@ -101,7 +103,6 @@ public enum DistanceFormatter implements Converter<String, Distance>, Formatter<
 	 *
 	 * @param source the raw source {@link String}, must not be {@literal null} or empty.
 	 * @param metric the {@link Metric} detected keyed by the keyword it was detected for, must not be {@literal null}.
-	 * @return
 	 */
 	private static Distance fromString(String source, Entry<String, Metric> metric) {
 

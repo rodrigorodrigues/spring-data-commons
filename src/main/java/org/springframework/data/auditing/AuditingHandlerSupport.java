@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ import java.util.Optional;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.log.LogMessage;
 import org.springframework.data.domain.Auditable;
 import org.springframework.data.mapping.context.PersistentEntities;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -151,11 +151,6 @@ public abstract class AuditingHandlerSupport {
 
 	/**
 	 * Sets modifying and creating auditor. Creating auditor is only set on new auditables.
-	 *
-	 * @param auditor
-	 * @param wrapper
-	 * @param isNew
-	 * @return
 	 */
 	private void touchAuditor(Auditor<?> auditor, AuditableBeanWrapper<?> wrapper, boolean isNew) {
 
@@ -176,10 +171,6 @@ public abstract class AuditingHandlerSupport {
 
 	/**
 	 * Touches the auditable regarding modification and creation date. Creation date is only set on new auditables.
-	 *
-	 * @param wrapper
-	 * @param isNew
-	 * @return
 	 */
 	private Optional<TemporalAccessor> touchDate(AuditableBeanWrapper<?> wrapper, boolean isNew) {
 

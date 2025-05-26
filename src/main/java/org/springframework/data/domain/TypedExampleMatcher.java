@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2024 the original author or authors.
+ * Copyright 2017-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
@@ -187,14 +189,14 @@ class TypedExampleMatcher implements ExampleMatcher {
 	private PropertySpecifier getOrCreatePropertySpecifier(String propertyPath, PropertySpecifiers propertySpecifiers) {
 
 		if (propertySpecifiers.hasSpecifierForPath(propertyPath)) {
-			return propertySpecifiers.getForPath(propertyPath);
+			return propertySpecifiers.getRequiredForPath(propertyPath);
 		}
 
 		return new PropertySpecifier(propertyPath);
 	}
 
 	@Override
-	public boolean equals(Object o) {
+	public boolean equals(@Nullable Object o) {
 
 		if (this == o) {
 			return true;
@@ -217,7 +219,6 @@ class TypedExampleMatcher implements ExampleMatcher {
 		}
 
 		if (!ObjectUtils.nullSafeEquals(propertySpecifiers, that.propertySpecifiers)) {
-
 			return false;
 		}
 
@@ -230,13 +231,8 @@ class TypedExampleMatcher implements ExampleMatcher {
 
 	@Override
 	public int hashCode() {
-		int result = ObjectUtils.nullSafeHashCode(nullHandler);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(defaultStringMatcher);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(propertySpecifiers);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(ignoredPaths);
-		result = 31 * result + (defaultIgnoreCase ? 1 : 0);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(mode);
-		return result;
+		return ObjectUtils.nullSafeHash(nullHandler, defaultStringMatcher, propertySpecifiers, ignoredPaths,
+				defaultIgnoreCase, mode);
 	}
 
 	@Override

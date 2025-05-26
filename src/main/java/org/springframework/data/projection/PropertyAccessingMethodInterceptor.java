@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,12 @@ import java.lang.reflect.Method;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
+import org.springframework.core.BridgeMethodResolver;
 import org.springframework.data.util.DirectFieldAccessFallbackBeanWrapper;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 
@@ -51,9 +53,8 @@ class PropertyAccessingMethodInterceptor implements MethodInterceptor {
 		this.target = new DirectFieldAccessFallbackBeanWrapper(target);
 	}
 
-	@Nullable
 	@Override
-	public Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
+	public @Nullable Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
 
 		if (ReflectionUtils.isObjectMethod(invocation.getMethod())) {
 			return invocation.proceed();
@@ -63,7 +64,8 @@ class PropertyAccessingMethodInterceptor implements MethodInterceptor {
 		PropertyDescriptor descriptor = BeanUtils.findPropertyForMethod(method);
 
 		if (descriptor == null) {
-			throw new IllegalStateException("Invoked method is not a property accessor");
+			throw new IllegalStateException("Invoked method '%s' is not a property accessor on '%s'"
+					.formatted(invocation.getMethod(), target.getWrappedClass().getName()));
 		}
 
 		if (!isSetterMethod(method, descriptor)) {
@@ -84,9 +86,14 @@ class PropertyAccessingMethodInterceptor implements MethodInterceptor {
 
 	private static Method lookupTargetMethod(MethodInvocation invocation, Class<?> targetType) {
 
-		Method method = BeanUtils.findMethod(targetType, invocation.getMethod().getName(),
-			invocation.getMethod().getParameterTypes());
+		Method invokedMethod = invocation.getMethod();
+		Method method = BeanUtils.findMethod(targetType, invokedMethod.getName(), invokedMethod.getParameterTypes());
 
-		return method != null ? method : invocation.getMethod();
+		if (method == null) {
+			return invokedMethod;
+		}
+
+		return BridgeMethodResolver.findBridgedMethod(method);
 	}
+
 }

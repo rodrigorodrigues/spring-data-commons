@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 the original author or authors.
+ * Copyright 2024-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
  */
 package org.springframework.data.expression;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.spel.ExpressionDependencies;
 import org.springframework.expression.EvaluationContext;
-import org.springframework.lang.Nullable;
 
 /**
  * SPI to provide to access a centrally defined potentially shared {@link ValueEvaluationContext}.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package org.springframework.data.aot;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.aop.SpringProxy;
 import org.springframework.aop.framework.Advised;
 import org.springframework.aot.hint.RuntimeHints;
@@ -26,7 +28,6 @@ import org.springframework.core.DecoratingProxy;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.domain.ReactiveAuditorAware;
 import org.springframework.data.util.ReactiveWrappers;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -38,7 +39,6 @@ import org.springframework.util.ClassUtils;
  * @since 3.0
  */
 class AuditingBeanRegistrationAotProcessor implements BeanRegistrationAotProcessor {
-
 
 	@Nullable
 	@Override

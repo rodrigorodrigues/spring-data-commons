@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 the original author or authors.
+ * Copyright 2021-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.data.aot.sample.ConfigWithCustomRepositoryBaseClass.RepoBaseClass;
 import org.springframework.data.repository.CrudRepository;
-import org.springframework.data.repository.config.EnableRepositories;
+import org.springframework.data.repository.config.EnableRepositoriesWithContributor;
 
 /**
  * @author Christoph Strobl
  */
 @Configuration
-@EnableRepositories(repositoryBaseClass = RepoBaseClass.class, considerNestedRepositories = true,
+@EnableRepositoriesWithContributor(repositoryBaseClass = RepoBaseClass.class, considerNestedRepositories = true,
 		includeFilters = { @Filter(type = FilterType.REGEX, pattern = ".*CustomerRepositoryWithCustomBaseRepo$") })
 public class ConfigWithCustomRepositoryBaseClass {
 

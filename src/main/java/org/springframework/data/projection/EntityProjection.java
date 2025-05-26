@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 the original author or authors.
+ * Copyright 2021-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.mapping.PropertyPath;
 import org.springframework.data.util.Streamable;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 
 /**
  * Descriptor for a top-level mapped type representing a view onto a domain type structure. The view may exactly match
@@ -182,8 +183,7 @@ public class EntityProjection<M, D> implements Streamable<EntityProjection.Prope
 	 * @param name the property name.
 	 * @return the type view, if the property is known; {@code null} otherwise.
 	 */
-	@Nullable
-	public EntityProjection<?, ?> findProperty(String name) {
+	public @Nullable EntityProjection<?, ?> findProperty(String name) {
 
 		for (PropertyProjection<?, ?> descriptor : properties) {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024 the original author or authors.
+ * Copyright 2016-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.asm.ClassWriter;
 import org.springframework.asm.Label;
 import org.springframework.asm.MethodVisitor;
@@ -56,7 +58,6 @@ import org.springframework.data.mapping.model.KotlinCopyMethod.KotlinCopyByPrope
 import org.springframework.data.mapping.model.KotlinValueUtils.ValueBoxing;
 import org.springframework.data.util.Optionals;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ConcurrentLruCache;
@@ -84,7 +85,7 @@ public class ClassGeneratingPropertyAccessorFactory implements PersistentPropert
 	private volatile Map<TypeInformation<?>, Class<PersistentPropertyAccessor<?>>> propertyAccessorClasses = new HashMap<>(
 			32);
 
-	private final ConcurrentLruCache<PersistentProperty<?>, Function<Object, Object>> wrapperCache = new ConcurrentLruCache<>(
+	private final ConcurrentLruCache<PersistentProperty<?>, Function<@Nullable Object, @Nullable Object>> wrapperCache = new ConcurrentLruCache<>(
 			256, KotlinValueBoxingAdapter::getWrapper);
 
 	@Override
@@ -379,12 +380,10 @@ public class ClassGeneratingPropertyAccessorFactory implements PersistentPropert
 			final List<PersistentProperty<?>> persistentProperties = new ArrayList<>();
 
 			entity.doWithAssociations((SimpleAssociationHandler) association -> {
-				if (association.getInverse() != null) {
-					persistentProperties.add(association.getInverse());
-				}
+				persistentProperties.add(association.getInverse());
 			});
 
-			entity.doWithProperties((SimplePropertyHandler) property -> persistentProperties.add(property));
+			entity.doWithProperties((SimplePropertyHandler) persistentProperties::add);
 
 			return persistentProperties;
 		}
@@ -583,9 +582,9 @@ public class ClassGeneratingPropertyAccessorFactory implements PersistentPropert
 						// keep it a lambda to infer the correct types, preventing
 						// LambdaConversionException: Invalid receiver type class java.lang.reflect.AccessibleObject; not a subtype
 						// of implementation type interface java.lang.reflect.Member
-						.map(it -> it.getDeclaringClass());
+						.map(Member::getDeclaringClass);
 
-			}).collect(Collectors.collectingAndThen(Collectors.toSet(), it -> new ArrayList<>(it)));
+			}).collect(Collectors.collectingAndThen(Collectors.toSet(), ArrayList::new));
 
 		}
 
@@ -836,7 +835,12 @@ public class ClassGeneratingPropertyAccessorFactory implements PersistentPropert
 
 			for (PersistentProperty<?> property : persistentProperties) {
 
-				mv.visitLabel(propertyStackMap.get(property.getName()).label);
+				PropertyStackAddress propertyStackAddress = propertyStackMap.get(property.getName());
+				if (propertyStackAddress == null) {
+					throw new IllegalStateException(
+							"No PropertyStackAddress found for property %s".formatted(property.getName()));
+				}
+				mv.visitLabel(propertyStackAddress.label);
 				mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
 
 				if (property.getGetter() != null || property.getField() != null) {
@@ -998,7 +1002,15 @@ public class ClassGeneratingPropertyAccessorFactory implements PersistentPropert
 			mv.visitLookupSwitchInsn(dfltLabel, hashes, switchJumpLabels);
 
 			for (PersistentProperty<?> property : persistentProperties) {
-				mv.visitLabel(propertyStackMap.get(property.getName()).label);
+
+				PropertyStackAddress propertyStackAddress = propertyStackMap.get(property.getName());
+
+				if (propertyStackAddress == null) {
+					throw new IllegalStateException(
+							"No PropertyStackAddress found for property %s".formatted(property.getName()));
+				}
+
+				mv.visitLabel(propertyStackAddress.label);
 				mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
 
 				if (supportsMutation(property)) {
@@ -1441,8 +1453,8 @@ public class ClassGeneratingPropertyAccessorFactory implements PersistentPropert
 	 * @param <T>
 	 * @since 3.2
 	 */
-	record KotlinValueBoxingAdapter<T> (PersistentEntity<?, ?> entity, PersistentPropertyAccessor<T> delegate,
-			ConcurrentLruCache<PersistentProperty<?>, Function<Object, Object>> wrapperCache)
+	record KotlinValueBoxingAdapter<T>(PersistentEntity<?, ?> entity, PersistentPropertyAccessor<T> delegate,
+			ConcurrentLruCache<PersistentProperty<?>, Function<@Nullable Object, @Nullable Object>> wrapperCache)
 			implements
 				PersistentPropertyAccessor<T> {
 
@@ -1459,7 +1471,7 @@ public class ClassGeneratingPropertyAccessorFactory implements PersistentPropert
 		 *         {@link Function#identity()} if wrapping is not necessary.
 		 * @see KotlinValueUtils#getCopyValueHierarchy(KParameter)
 		 */
-		static Function<Object, Object> getWrapper(PersistentProperty<?> property) {
+		static Function<@Nullable Object, @Nullable Object> getWrapper(PersistentProperty<?> property) {
 
 			Optional<KotlinCopyMethod> kotlinCopyMethod = KotlinCopyMethod.findCopyMethod(property.getOwner().getType())
 					.filter(it -> it.supportsProperty(property));
@@ -1488,7 +1500,7 @@ public class ClassGeneratingPropertyAccessorFactory implements PersistentPropert
 		}
 
 		@Override
-		public Object getProperty(PersistentProperty<?> property) {
+		public @Nullable Object getProperty(PersistentProperty<?> property) {
 			return delegate.getProperty(property);
 		}
 

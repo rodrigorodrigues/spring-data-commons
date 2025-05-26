@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,13 @@
  */
 package org.springframework.data.geo;
 
+import java.io.Serial;
+
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -31,7 +34,7 @@ import org.springframework.util.ObjectUtils;
  */
 public class GeoPage<T> extends PageImpl<GeoResult<T>> {
 
-	private static final long serialVersionUID = -5655267379242128600L;
+	private static final @Serial long serialVersionUID = -5655267379242128600L;
 
 	/**
 	 * The average distance of the underlying results.
@@ -55,13 +58,17 @@ public class GeoPage<T> extends PageImpl<GeoResult<T>> {
 	 *
 	 * @param results must not be {@literal null}.
 	 * @param pageable must not be {@literal null}.
-	 * @param total
+	 * @param total total number of results.
 	 */
 	public GeoPage(GeoResults<T> results, Pageable pageable, long total) {
 
 		super(results.getContent(), pageable, total);
 
 		this.averageDistance = results.getAverageDistance();
+	}
+
+	public Distance getAverageDistance() {
+		return this.averageDistance;
 	}
 
 	@Override
@@ -81,9 +88,5 @@ public class GeoPage<T> extends PageImpl<GeoResult<T>> {
 	@Override
 	public int hashCode() {
 		return super.hashCode() + ObjectUtils.nullSafeHashCode(this.averageDistance);
-	}
-
-	public Distance getAverageDistance() {
-		return this.averageDistance;
 	}
 }

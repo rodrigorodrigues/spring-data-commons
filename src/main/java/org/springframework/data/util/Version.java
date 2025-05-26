@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024 the original author or authors.
+ * Copyright 2013-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ package org.springframework.data.util;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -146,6 +147,7 @@ public class Version implements Comparable<Version> {
 		return compareTo(version) <= 0;
 	}
 
+	@Override
 	public int compareTo(@SuppressWarnings("null") Version that) {
 
 		if (major != that.major) {

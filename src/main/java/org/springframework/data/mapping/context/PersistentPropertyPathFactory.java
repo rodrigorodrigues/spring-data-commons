@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2024 the original author or authors.
+ * Copyright 2018-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.mapping.AssociationHandler;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
@@ -32,7 +34,6 @@ import org.springframework.data.mapping.PropertyPath;
 import org.springframework.data.util.Pair;
 import org.springframework.data.util.StreamUtils;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -210,8 +211,7 @@ class PersistentPropertyPathFactory<E extends PersistentEntity<?, P>, P extends 
 		return PathResolution.resolved(path);
 	}
 
-	@Nullable
-	private Pair<DefaultPersistentPropertyPath<P>, E> getPair(DefaultPersistentPropertyPath<P> path,
+	private @Nullable Pair<DefaultPersistentPropertyPath<P>, E> getPair(DefaultPersistentPropertyPath<P> path,
 			Iterator<String> iterator, String segment, E entity) {
 
 		P property = entity.getPersistentProperty(segment);
@@ -263,8 +263,7 @@ class PersistentPropertyPathFactory<E extends PersistentEntity<?, P>, P extends 
 
 		entity.doWithProperties(propertyTester);
 
-		AssociationHandler<P> handler = association -> propertyTester
-				.doWithPersistentProperty(association.getInverse());
+		AssociationHandler<P> handler = association -> propertyTester.doWithPersistentProperty(association.getInverse());
 		entity.doWithAssociations(handler);
 
 		return properties;
@@ -303,8 +302,7 @@ class PersistentPropertyPathFactory<E extends PersistentEntity<?, P>, P extends 
 				return false;
 			}
 
-			return Objects.equals(this.type, that.type)
-					&& Objects.equals(this.path, that.path);
+			return Objects.equals(this.type, that.type) && Objects.equals(this.path, that.path);
 		}
 
 		@Override
@@ -315,9 +313,7 @@ class PersistentPropertyPathFactory<E extends PersistentEntity<?, P>, P extends 
 		@Override
 		public String toString() {
 
-			return "TypeAndPath[" +
-					"type=" + type + ", " +
-					"path=" + path + ']';
+			return "TypeAndPath[" + "type=" + type + ", " + "path=" + path + ']';
 		}
 	}
 
@@ -436,8 +432,8 @@ class PersistentPropertyPathFactory<E extends PersistentEntity<?, P>, P extends 
 
 		private final PersistentPropertyPath<?> path;
 		private final boolean resolvable;
-		private @Nullable final String source;
 
+		private @Nullable final String source;
 		private @Nullable final String segment;
 		private @Nullable final TypeInformation<?> type;
 
@@ -473,7 +469,7 @@ class PersistentPropertyPathFactory<E extends PersistentEntity<?, P>, P extends 
 		 * @return the path if available.
 		 * @throws InvalidPersistentPropertyPath when the path could not be resolved to an actual property
 		 */
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({ "unchecked", "NullAway" })
 		<P extends PersistentProperty<P>> PersistentPropertyPath<P> getResolvedPath() {
 
 			if (resolvable) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024 the original author or authors.
+ * Copyright 2013-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@ package org.springframework.data.web;
 
 import static org.springframework.hateoas.TemplateVariable.VariableType.*;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.data.domain.Sort;
 import org.springframework.hateoas.TemplateVariable;
 import org.springframework.hateoas.TemplateVariables;
 import org.springframework.hateoas.server.mvc.UriComponentsContributor;
-import org.springframework.lang.Nullable;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;

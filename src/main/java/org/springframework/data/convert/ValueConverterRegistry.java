@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
  */
 package org.springframework.data.convert;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.mapping.PersistentProperty;
-import org.springframework.lang.Nullable;
 
 /**
  * A registry of {@link PersistentProperty property-specific} {@link PropertyValueConverter value converters}
@@ -48,8 +49,8 @@ public interface ValueConverterRegistry<P extends PersistentProperty<P>> {
 	 * @param <SV> store-specific type.
 	 * @return {@literal null} if no converter present for the given type/path combination.
 	 */
-	@Nullable
-	<DV, SV> PropertyValueConverter<DV, SV, ? extends ValueConversionContext<P>> getConverter(Class<?> type, String path);
+	<DV, SV> @Nullable PropertyValueConverter<DV, SV, ? extends ValueConversionContext<P>> getConverter(Class<?> type,
+			String path);
 
 	/**
 	 * Check if a converter is registered for the given type, path combination.

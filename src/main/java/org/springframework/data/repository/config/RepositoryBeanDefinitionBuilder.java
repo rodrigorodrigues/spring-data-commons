@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import java.util.stream.Stream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -47,7 +48,6 @@ import org.springframework.data.config.ParsingUtils;
 import org.springframework.data.repository.core.support.RepositoryFragment;
 import org.springframework.data.repository.core.support.RepositoryFragmentsFactoryBean;
 import org.springframework.data.util.Optionals;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
@@ -116,6 +116,11 @@ class RepositoryBeanDefinitionBuilder {
 				.rootBeanDefinition(configuration.getRepositoryFactoryBeanClassName());
 
 		builder.getRawBeanDefinition().setSource(configuration.getSource());
+
+		// AOT Repository hints
+		builder.getRawBeanDefinition().setAttribute(RepositoryConfiguration.class.getName(), configuration);
+		builder.getRawBeanDefinition().setAttribute(RepositoryConfigurationExtension.class.getName(), extension);
+
 		builder.addConstructorArgValue(configuration.getRepositoryInterface());
 		builder.addPropertyValue("queryLookupStrategyKey", configuration.getQueryLookupStrategyKey());
 		builder.addPropertyValue("lazyInit", configuration.isLazyInit());
@@ -124,6 +129,10 @@ class RepositoryBeanDefinitionBuilder {
 
 		configuration.getRepositoryBaseClassName()//
 				.ifPresent(it -> builder.addPropertyValue("repositoryBaseClass", it));
+
+		configuration.getRepositoryFragmentsContributorClassName()//
+				.ifPresent(it -> builder.addPropertyValue("repositoryFragmentsContributor",
+						BeanDefinitionBuilder.genericBeanDefinition(it).getRawBeanDefinition()));
 
 		NamedQueriesBeanDefinitionBuilder definitionBuilder = new NamedQueriesBeanDefinitionBuilder(
 				extension.getDefaultNamedQueryLocation());
@@ -149,6 +158,7 @@ class RepositoryBeanDefinitionBuilder {
 
 	// TODO: merge that with the one that creates the BD
 	// TODO: Add support for fragments discovered from spring.factories
+	@SuppressWarnings("NullAway")
 	RepositoryConfigurationAdapter<?> buildMetadata(RepositoryConfiguration<?> configuration) {
 
 		ImplementationDetectionConfiguration config = configuration
@@ -165,6 +175,7 @@ class RepositoryBeanDefinitionBuilder {
 			Optional<AbstractBeanDefinition> beanDefinition = implementationDetector.detectCustomImplementation(lookup);
 
 			if (beanDefinition.isPresent()) {
+
 				repositoryFragmentConfigurationStream = new ArrayList<>(1);
 
 				List<String> interfaceNames = fragmentMetadata.getFragmentInterfaces(configuration.getRepositoryInterface())

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.aop.ProxyMethodInvocation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ReflectionUtils;
 
 /**
@@ -59,9 +60,8 @@ public class DefaultMethodInvokingMethodInterceptor implements MethodInterceptor
 		return atomicBoolean.get();
 	}
 
-	@Nullable
 	@Override
-	public Object invoke(MethodInvocation invocation) throws Throwable {
+	public @Nullable Object invoke(MethodInvocation invocation) throws Throwable {
 
 		Method method = invocation.getMethod();
 
@@ -93,7 +93,7 @@ public class DefaultMethodInvokingMethodInterceptor implements MethodInterceptor
 	 *
 	 * @param method must not be {@literal null}.
 	 * @return the method handle.
-	 * @throws ReflectiveOperationException
+	 * @throws ReflectiveOperationException in case of an error during method handle lookup.
 	 */
 	private static MethodHandle lookup(Method method) throws ReflectiveOperationException {
 

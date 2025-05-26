@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2024 the original author or authors.
+ * Copyright 2019-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@ package org.springframework.data.mapping.model;
 
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.mapping.InstanceCreatorMetadata;
 import org.springframework.data.mapping.Parameter;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -95,7 +96,7 @@ public class InstantiationAwarePropertyAccessor<T> implements PersistentProperty
 
 		creator.getParameters().forEach(it -> {
 
-			if (it.getName() == null) {
+			if (!it.hasName()) {
 				throw new IllegalStateException(
 						String.format("Cannot detect parameter names of copy creator of %s", owner.getType()));
 			}
@@ -106,9 +107,8 @@ public class InstantiationAwarePropertyAccessor<T> implements PersistentProperty
 		this.bean = (T) instantiator.createInstance(owner, new ParameterValueProvider() {
 
 			@Override
-			@Nullable
-			@SuppressWarnings("null")
-			public Object getParameterValue(Parameter parameter) {
+			@SuppressWarnings("NullAway")
+			public @Nullable Object getParameterValue(Parameter parameter) {
 
 				return property.getName().equals(parameter.getName()) //
 						? value

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 the original author or authors.
+ * Copyright 2023-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
  */
 package org.springframework.data.domain;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.Limit.Limited;
 import org.springframework.data.domain.Limit.Unlimited;
-import org.springframework.lang.Nullable;
 
 /**
  * {@link Limit} represents the maximum value up to which an operation should continue processing. It may be used for
@@ -28,7 +29,11 @@ import org.springframework.lang.Nullable;
  * over using {@literal null} or {@link java.util.Optional#empty()} to indicate the absence of an actual {@link Limit}.
  * </p>
  * {@link Limit} itself does not make assumptions about the actual {@link #max()} value sign. This means that a negative
- * value may be valid within a defined context.
+ * value may be valid within a defined context. A zero limit can be useful in cases where the result is not needed but
+ * the underlying activity to compute results might be required.
+ * <p>
+ * Note that using a zero Limit with repository query methods returning {@link Page} is rejected because of a zero-page
+ * size.
  *
  * @author Christoph Strobl
  * @author Oliver Drotbohm
@@ -104,13 +109,12 @@ public sealed interface Limit permits Limited, Unlimited {
 				return false;
 			}
 
-			return this.isUnlimited() && that.isUnlimited()
-					|| max() == that.max();
+			return this.isUnlimited() && that.isUnlimited() || max() == that.max();
 		}
 
 		@Override
 		public int hashCode() {
-			return max ^ max >>> 32;
+			return max;
 		}
 	}
 

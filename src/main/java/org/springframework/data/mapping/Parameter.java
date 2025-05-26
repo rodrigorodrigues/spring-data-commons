@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 the original author or authors.
+ * Copyright 2021-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,12 @@ package org.springframework.data.mapping;
 import java.lang.annotation.Annotation;
 import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.data.util.Lazy;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
@@ -33,6 +34,7 @@ import org.springframework.util.StringUtils;
  * @param <T> the type of the parameter
  * @author Oliver Gierke
  * @author Christoph Strobl
+ * @author Chris Bono
  */
 public class Parameter<T, P extends PersistentProperty<P>> {
 
@@ -80,8 +82,7 @@ public class Parameter<T, P extends PersistentProperty<P>> {
 		this.hasExpression = Lazy.of(() -> StringUtils.hasText(getValueExpression()));
 	}
 
-	@Nullable
-	private static String getValue(MergedAnnotations annotations) {
+	private static @Nullable String getValue(MergedAnnotations annotations) {
 
 		return annotations.get(Value.class) //
 				.getValue("value", String.class) //
@@ -90,13 +91,41 @@ public class Parameter<T, P extends PersistentProperty<P>> {
 	}
 
 	/**
-	 * Returns the name of the parameter.
+	 * Returns the name of the parameter (through constructor/method parameter naming).
 	 *
-	 * @return
+	 * @return the name of the parameter.
+	 * @see org.springframework.core.ParameterNameDiscoverer
 	 */
-	@Nullable
-	public String getName() {
+	public @Nullable String getName() {
 		return name;
+	}
+
+	/**
+	 * Returns whether the parameter has a name.
+	 *
+	 * @return whether the parameter has a name.
+	 * @since 3.5
+	 */
+	public boolean hasName() {
+		return this.name != null;
+	}
+
+	/**
+	 * Returns the required name of the parameter (through constructor/method parameter naming) or throws
+	 * {@link IllegalStateException} if the parameter has no name.
+	 *
+	 * @return the parameter name or throws {@link IllegalStateException} if the parameter does not have a name.
+	 * @since 3.5
+	 * @see org.springframework.core.ParameterNameDiscoverer
+	 */
+	@SuppressWarnings("NullAway")
+	public String getRequiredName() {
+
+		if (!hasName()) {
+			throw new IllegalStateException("No name associated with this parameter");
+		}
+
+		return getName();
 	}
 
 	/**
@@ -131,7 +160,6 @@ public class Parameter<T, P extends PersistentProperty<P>> {
 	 * Returns the expression to be used when looking up a source data structure to populate the actual parameter value.
 	 *
 	 * @return the expression to be used when looking up a source data structure.
-	 * @deprecated since 3.3, use {@link #getValueExpression()} instead.
 	 */
 	@Nullable
 	public String getSpelExpression() {
@@ -156,6 +184,7 @@ public class Parameter<T, P extends PersistentProperty<P>> {
 	 * @return the expression to be used when looking up a source data structure.
 	 * @since 3.3
 	 */
+	@SuppressWarnings({ "DataFlowIssue", "NullAway" })
 	public String getRequiredValueExpression() {
 
 		if (!hasValueExpression()) {
@@ -163,17 +192,6 @@ public class Parameter<T, P extends PersistentProperty<P>> {
 		}
 
 		return getValueExpression();
-	}
-
-	/**
-	 * Returns whether the constructor parameter is equipped with a SpEL expression.
-	 *
-	 * @return {@literal true}} if the parameter is equipped with a SpEL expression.
-	 * @deprecated since 3.3, use {@link #hasValueExpression()} instead.
-	 */
-	@Deprecated(since = "3.3")
-	public boolean hasSpelExpression() {
-		return hasValueExpression();
 	}
 
 	/**

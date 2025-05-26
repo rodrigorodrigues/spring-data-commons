@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 the original author or authors.
+ * Copyright 2021-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,8 +54,7 @@ public class JMoleculesConverters {
 
 		List<Object> converters = new ArrayList<>();
 
-		Supplier<ConversionService> conversionService = (Supplier<ConversionService>) () -> DefaultConversionService
-				.getSharedInstance();
+		Supplier<ConversionService> conversionService = DefaultConversionService::getSharedInstance;
 
 		IdentifierToPrimitivesConverter toPrimitives = new IdentifierToPrimitivesConverter(conversionService);
 		PrimitivesToIdentifierConverter toIdentifier = new PrimitivesToIdentifierConverter(conversionService);

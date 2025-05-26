@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
  */
 package org.springframework.data.mapping.model;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.mapping.Parameter;
 import org.springframework.data.mapping.PersistentProperty;
-import org.springframework.lang.Nullable;
 
 /**
  * Callback interface to lookup values for a given {@link Parameter}.
@@ -30,8 +31,7 @@ public interface ParameterValueProvider<P extends PersistentProperty<P>> {
 	 * Returns the value to be used for the given {@link Parameter} (usually when entity instances are created).
 	 *
 	 * @param parameter must not be {@literal null}.
-	 * @return
+	 * @return the property value. Can be {@literal null}.
 	 */
-	@Nullable
-	<T> T getParameterValue(Parameter<T, P> parameter);
+	<T> @Nullable T getParameterValue(Parameter<T, P> parameter);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@ package org.springframework.data.convert;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.convert.PropertyValueConverterFactoryUnitTests.Person;
 import org.springframework.data.mapping.context.SamplePersistentProperty;
-import org.springframework.lang.Nullable;
 
 /**
  * Unit tests for {@link ValueConverterRegistry}.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,7 @@
 package org.springframework.data.repository.config;
 
 import java.lang.annotation.Annotation;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
@@ -26,6 +24,8 @@ import java.util.stream.Stream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.aot.generate.GenerationContext;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.annotation.Reflective;
@@ -39,13 +39,16 @@ import org.springframework.beans.factory.aot.BeanRegistrationAotProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.RegisteredBean;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.context.EnvironmentAware;
 import org.springframework.core.annotation.MergedAnnotation;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.EnvironmentCapable;
+import org.springframework.core.env.StandardEnvironment;
+import org.springframework.data.repository.aot.generate.RepositoryContributor;
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport;
 import org.springframework.data.util.TypeContributor;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
 /**
  * {@link BeanRegistrationAotProcessor} responsible processing and providing AOT configuration for repositories.
@@ -66,23 +69,27 @@ import org.springframework.util.StringUtils;
  *
  * @author Christoph Strobl
  * @author John Blum
+ * @author Mark Paluch
  * @since 3.0
  */
-public class RepositoryRegistrationAotProcessor implements BeanRegistrationAotProcessor, BeanFactoryAware {
-
-	private ConfigurableListableBeanFactory beanFactory;
+public class RepositoryRegistrationAotProcessor
+		implements BeanRegistrationAotProcessor, BeanFactoryAware, EnvironmentAware, EnvironmentCapable {
 
 	private final Log logger = LogFactory.getLog(getClass());
 
-	private Map<String, RepositoryConfiguration<?>> configMap;
+	private @Nullable ConfigurableListableBeanFactory beanFactory;
 
-	@Nullable
+	private Environment environment = new StandardEnvironment();
+
+	private Map<String, RepositoryConfiguration<?>> configMap = Collections.emptyMap();
+
 	@Override
-	public BeanRegistrationAotContribution processAheadOfTime(RegisteredBean bean) {
+	public @Nullable BeanRegistrationAotContribution processAheadOfTime(RegisteredBean bean) {
 		return isRepositoryBean(bean) ? newRepositoryRegistrationAotContribution(bean) : null;
 	}
 
-	protected void contribute(AotRepositoryContext repositoryContext, GenerationContext generationContext) {
+	@Nullable
+	protected RepositoryContributor contribute(AotRepositoryContext repositoryContext, GenerationContext generationContext) {
 
 		repositoryContext.getResolvedTypes().stream()
 				.filter(it -> !RepositoryRegistrationAotContribution.isJavaOrPrimitiveType(it))
@@ -91,6 +98,8 @@ public class RepositoryRegistrationAotProcessor implements BeanRegistrationAotPr
 		repositoryContext.getResolvedAnnotations().stream()
 				.filter(RepositoryRegistrationAotProcessor::isSpringDataManagedAnnotation).map(MergedAnnotation::getType)
 				.forEach(it -> contributeType(it, generationContext));
+
+		return null;
 	}
 
 	/**
@@ -107,10 +116,6 @@ public class RepositoryRegistrationAotProcessor implements BeanRegistrationAotPr
 		ReflectiveRuntimeHintsRegistrar registrar = new ReflectiveRuntimeHintsRegistrar();
 		RuntimeHints hints = generationContext.getRuntimeHints();
 
-		List<Class<?>> aggregateRootTypes = new ArrayList<>();
-		aggregateRootTypes.add(information.getDomainType());
-		aggregateRootTypes.addAll(information.getAlternativeDomainTypes());
-
 		Stream.concat(Stream.of(information.getDomainType()), information.getAlternativeDomainTypes().stream())
 				.forEach(it -> registrar.registerRuntimeHints(hints, it));
 	}
@@ -119,15 +124,23 @@ public class RepositoryRegistrationAotProcessor implements BeanRegistrationAotPr
 		return getConfigMap().containsKey(bean.getBeanName());
 	}
 
-	protected RepositoryRegistrationAotContribution newRepositoryRegistrationAotContribution(
+	protected @Nullable RepositoryRegistrationAotContribution newRepositoryRegistrationAotContribution(
 			RegisteredBean repositoryBean) {
 
-		RepositoryRegistrationAotContribution contribution = RepositoryRegistrationAotContribution.fromProcessor(this)
-				.forBean(repositoryBean);
+		RepositoryRegistrationAotContribution contribution = RepositoryRegistrationAotContribution.load(this,
+				repositoryBean);
 
-		BiConsumer<AotRepositoryContext, GenerationContext> moduleContribution = this::registerReflectiveForAggregateRoot;
+		// cannot contribute a repository bean.
+		if (contribution == null) {
+			return null;
+		}
 
-		return contribution.withModuleContribution(moduleContribution.andThen(this::contribute));
+		//TODO: add the hook for customizing bean initialization code here!
+
+		return contribution.withModuleContribution((repositoryContext, generationContext) -> {
+			registerReflectiveForAggregateRoot(repositoryContext, generationContext);
+			return contribute(repositoryContext, generationContext);
+		});
 	}
 
 	@Override
@@ -139,36 +152,52 @@ public class RepositoryRegistrationAotProcessor implements BeanRegistrationAotPr
 		this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
 	}
 
-	protected ConfigurableListableBeanFactory getBeanFactory() {
-		return this.beanFactory;
+	@Override
+	public void setEnvironment(Environment environment) {
+		this.environment = environment;
 	}
 
-	public void setConfigMap(@Nullable Map<String, RepositoryConfiguration<?>> configMap) {
+	@Override
+	public Environment getEnvironment() {
+		return this.environment;
+	}
+
+	public void setConfigMap(Map<String, RepositoryConfiguration<?>> configMap) {
 		this.configMap = configMap;
 	}
 
 	public Map<String, RepositoryConfiguration<?>> getConfigMap() {
-		return nullSafeMap(this.configMap);
+		return this.configMap;
 	}
 
-	private <K, V> Map<K, V> nullSafeMap(@Nullable Map<K, V> map) {
-		return map != null ? map : Collections.emptyMap();
+	protected ConfigurableListableBeanFactory getBeanFactory() {
+
+		if (this.beanFactory == null) {
+			throw new IllegalStateException(
+					"No BeanFactory available. Make sure to set the BeanFactory before using this processor.");
+		}
+
+		return this.beanFactory;
 	}
 
-	@Nullable
-	protected RepositoryConfiguration<?> getRepositoryMetadata(RegisteredBean bean) {
-		return getConfigMap().get(nullSafeBeanName(bean));
+	protected @Nullable RepositoryConfiguration<?> getRepositoryMetadata(RegisteredBean bean) {
+		return getConfigMap().get(bean.getBeanName());
 	}
 
-	private String nullSafeBeanName(RegisteredBean bean) {
-
-		String beanName = bean.getBeanName();
-
-		return StringUtils.hasText(beanName) ? beanName : "";
+	protected void contributeType(Class<?> type, GenerationContext generationContext) {
+		TypeContributor.contribute(type, it -> true, generationContext);
 	}
 
 	protected Log getLogger() {
 		return this.logger;
+	}
+
+	protected void logDebug(String message, Object... arguments) {
+		logAt(Log::isDebugEnabled, Log::debug, message, arguments);
+	}
+
+	protected void logTrace(String message, Object... arguments) {
+		logAt(Log::isTraceEnabled, Log::trace, message, arguments);
 	}
 
 	private void logAt(Predicate<Log> logLevelPredicate, BiConsumer<Log, String> logOperation, String message,
@@ -181,25 +210,14 @@ public class RepositoryRegistrationAotProcessor implements BeanRegistrationAotPr
 		}
 	}
 
-	protected void logDebug(String message, Object... arguments) {
-		logAt(Log::isDebugEnabled, Log::debug, message, arguments);
+	private static boolean isSpringDataManagedAnnotation(MergedAnnotation<?> annotation) {
+
+		return isSpringDataType(annotation.getType())
+				|| annotation.getMetaTypes().stream().anyMatch(RepositoryRegistrationAotProcessor::isSpringDataType);
 	}
 
-	protected void logTrace(String message, Object... arguments) {
-		logAt(Log::isTraceEnabled, Log::trace, message, arguments);
+	private static boolean isSpringDataType(Class<?> type) {
+		return type.getPackageName().startsWith(TypeContributor.DATA_NAMESPACE);
 	}
 
-	private static boolean isSpringDataManagedAnnotation(@Nullable MergedAnnotation<?> annotation) {
-
-		return annotation != null && (isInSpringDataNamespace(annotation.getType())
-				|| annotation.getMetaTypes().stream().anyMatch(RepositoryRegistrationAotProcessor::isInSpringDataNamespace));
-	}
-
-	protected void contributeType(Class<?> type, GenerationContext generationContext) {
-		TypeContributor.contribute(type, it -> true, generationContext);
-	}
-
-	private static boolean isInSpringDataNamespace(Class<?> type) {
-		return type.getPackage().getName().startsWith(TypeContributor.DATA_NAMESPACE);
-	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2024 the original author or authors.
+ * Copyright 2019-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -136,6 +136,10 @@ public interface ReactiveQuerydslPredicateExecutor<T> {
 	/**
 	 * Returns entities matching the given {@link Predicate} applying the {@link Function queryFunction} that defines the
 	 * query and its result type.
+	 * <p>
+	 * The query object used with {@code queryFunction} is only valid inside the {@code findBy(…)} method call. This
+	 * requires the query function to return a query result and not the {@link FluentQuery} object itself to ensure the
+	 * query is executed inside the {@code findBy(…)} method.
 	 *
 	 * @param predicate must not be {@literal null}.
 	 * @param queryFunction the query function defining projection, sorting, and the result type

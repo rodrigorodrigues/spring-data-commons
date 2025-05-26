@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,18 @@ package org.springframework.data.repository.query;
 
 import java.util.Iterator;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Range;
+import org.springframework.data.domain.Score;
 import org.springframework.data.domain.ScrollPosition;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Vector;
 import org.springframework.data.repository.util.QueryExecutionConverters;
 import org.springframework.data.repository.util.ReactiveWrapperConverters;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -36,7 +40,7 @@ import org.springframework.util.Assert;
 public class ParametersParameterAccessor implements ParameterAccessor {
 
 	private final Parameters<?, ?> parameters;
-	private final Object[] values;
+	private final @Nullable Object[] values;
 
 	/**
 	 * Creates a new {@link ParametersParameterAccessor}.
@@ -44,7 +48,7 @@ public class ParametersParameterAccessor implements ParameterAccessor {
 	 * @param parameters must not be {@literal null}.
 	 * @param values must not be {@literal null}.
 	 */
-	public ParametersParameterAccessor(Parameters<?, ?> parameters, Object[] values) {
+	public ParametersParameterAccessor(Parameters<?, ?> parameters, @Nullable Object[] values) {
 
 		Assert.notNull(parameters, "Parameters must not be null");
 		Assert.notNull(values, "Values must not be null");
@@ -64,7 +68,7 @@ public class ParametersParameterAccessor implements ParameterAccessor {
 		}
 	}
 
-	private static boolean requiresUnwrapping(Object[] values) {
+	private static boolean requiresUnwrapping(@Nullable Object[] values) {
 
 		for (Object value : values) {
 			if (value != null && (QueryExecutionConverters.supports(value.getClass())
@@ -90,12 +94,42 @@ public class ParametersParameterAccessor implements ParameterAccessor {
 	 *
 	 * @return
 	 */
-	protected Object[] getValues() {
+	protected @Nullable Object[] getValues() {
 		return this.values;
 	}
 
 	@Override
-	public ScrollPosition getScrollPosition() {
+	public @Nullable Vector getVector() {
+
+		if (parameters.getVectorIndex() == -1) {
+			return null;
+		}
+
+		return (Vector) values[parameters.getVectorIndex()];
+	}
+
+	@Override
+	public @Nullable Score getScore() {
+
+		if (!parameters.hasScoreParameter()) {
+			return null;
+		}
+
+		return (Score) values[parameters.getScoreIndex()];
+	}
+
+	@Override
+	public @Nullable Range<Score> getScoreRange() {
+
+		if (!parameters.hasScoreRangeParameter()) {
+			return null;
+		}
+
+		return (Range<Score>) values[parameters.getScoreRangeIndex()];
+	}
+
+	@Override
+	public @Nullable ScrollPosition getScrollPosition() {
 
 		if (!parameters.hasScrollPositionParameter()) {
 
@@ -146,6 +180,7 @@ public class ParametersParameterAccessor implements ParameterAccessor {
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public Limit getLimit() {
 
 		if (parameters.hasLimitParameter()) {
@@ -184,13 +219,12 @@ public class ParametersParameterAccessor implements ParameterAccessor {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	@Nullable
-	protected <T> T getValue(int index) {
+	protected <T> @Nullable T getValue(int index) {
 		return (T) values[index];
 	}
 
 	@Override
-	public Object getBindableValue(int index) {
+	public @Nullable Object getBindableValue(int index) {
 		return values[parameters.getBindableParameter(index).getIndex()];
 	}
 
@@ -207,7 +241,7 @@ public class ParametersParameterAccessor implements ParameterAccessor {
 	}
 
 	@Override
-	public BindableParameterIterator iterator() {
+	public Iterator<Object> iterator() {
 		return new BindableParameterIterator(this);
 	}
 
@@ -241,9 +275,8 @@ public class ParametersParameterAccessor implements ParameterAccessor {
 		 *
 		 * @return
 		 */
-		@Nullable
 		@Override
-		public Object next() {
+		public @Nullable Object next() {
 			return accessor.getBindableValue(currentIndex++);
 		}
 

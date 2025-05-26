@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,15 @@ public interface RepositoryFactoryInformation<T, ID> {
 	 * @return
 	 */
 	RepositoryInformation getRepositoryInformation();
+
+	/**
+	 * Returns the {@link RepositoryFragmentsContributor} that is used to contribute additional fragments based on the
+	 * repository declaration.
+	 *
+	 * @return
+	 * @since 4.0
+	 */
+	RepositoryFragmentsContributor getRepositoryFragmentsContributor();
 
 	/**
 	 * Returns the {@link PersistentEntity} managed by the underlying repository. Can be {@literal null} in case the

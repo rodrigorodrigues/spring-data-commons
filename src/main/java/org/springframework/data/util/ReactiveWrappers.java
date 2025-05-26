@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024 the original author or authors.
+ * Copyright 2016-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,16 @@ package org.springframework.data.util;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.ReactiveAdapter;
 import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.core.ReactiveTypeDescriptor;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ConcurrentReferenceHashMap;
@@ -138,9 +140,20 @@ public abstract class ReactiveWrappers {
 
 		Assert.notNull(type, "Type must not be null");
 
-		return Arrays.stream(type.getMethods())//
-				.flatMap(ReflectionUtils::returnTypeAndParameters)//
-				.anyMatch(ReactiveWrappers::supports);
+		for (Method method : type.getMethods()) {
+
+			if (ReactiveWrappers.supports(method.getReturnType())) {
+				return true;
+			}
+
+			for (Class<?> parameterType : method.getParameterTypes()) {
+				if (ReactiveWrappers.supports(parameterType)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/**

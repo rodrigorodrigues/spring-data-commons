@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,9 +26,10 @@ import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.util.Streamable;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ConcurrentReferenceHashMap;
 import org.springframework.util.StringUtils;
@@ -102,8 +103,7 @@ public class PropertyPath implements Streamable<PropertyPath> {
 				: this.typeInformation.getRequiredActualType();
 	}
 
-	@Nullable
-	private static Property lookupProperty(TypeInformation<?> owningType, String name) {
+	private static @Nullable Property lookupProperty(TypeInformation<?> owningType, String name) {
 
 		TypeInformation<?> propertyType = owningType.getProperty(name);
 
@@ -185,8 +185,7 @@ public class PropertyPath implements Streamable<PropertyPath> {
 	 * @return the next nested {@link PropertyPath} or {@literal null} if no nested {@link PropertyPath} available.
 	 * @see #hasNext()
 	 */
-	@Nullable
-	public PropertyPath next() {
+	public @Nullable PropertyPath next() {
 		return next;
 	}
 
@@ -268,8 +267,7 @@ public class PropertyPath implements Streamable<PropertyPath> {
 			}
 
 			@Override
-			@Nullable
-			public PropertyPath next() {
+			public @Nullable PropertyPath next() {
 
 				PropertyPath result = current;
 

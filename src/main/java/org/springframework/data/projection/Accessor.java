@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024 the original author or authors.
+ * Copyright 2016-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ public final class Accessor {
 	/**
 	 * Returns whether the accessor is a getter.
 	 *
-	 * @return
+	 * @return {@literal true} if the accessor is a getter; {@literal false} otherwise.
 	 */
 	public boolean isGetter() {
 		return method.equals(descriptor.getReadMethod());
@@ -67,7 +67,7 @@ public final class Accessor {
 	/**
 	 * Returns whether the accessor is a setter.
 	 *
-	 * @return
+	 * @return {@literal true} if the accessor is a setter; {@literal false} otherwise.
 	 */
 	public boolean isSetter() {
 		return method.equals(descriptor.getWriteMethod());

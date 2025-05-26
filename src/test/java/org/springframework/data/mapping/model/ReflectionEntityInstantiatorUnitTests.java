@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.data.mapping.model.ReflectionEntityInstantiator.*;
 
-import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.List;
 
@@ -28,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import org.springframework.data.mapping.Parameter;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
@@ -113,14 +113,12 @@ class ReflectionEntityInstantiatorUnitTests<P extends PersistentProperty<P>> {
 	}
 
 	@Test // DATACMNS-283
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	void capturesContextOnInstantiationException() throws Exception {
+	void capturesContextOnInstantiationException() {
 
 		PersistentEntity<Sample, P> entity = new BasicPersistentEntity<>(TypeInformation.of(Sample.class));
 
 		doReturn("FOO").when(provider).getParameterValue(any(Parameter.class));
 
-		Constructor constructor = Sample.class.getConstructor(Long.class, String.class);
 		List<Object> parameters = Arrays.asList("FOO", "FOO");
 
 		try {
@@ -130,9 +128,8 @@ class ReflectionEntityInstantiatorUnitTests<P extends PersistentProperty<P>> {
 
 		} catch (MappingInstantiationException o_O) {
 
-			assertThat(o_O.getConstructor()).hasValue(constructor);
 			assertThat(o_O.getConstructorArguments()).isEqualTo(parameters);
-			assertThat(o_O.getEntityType()).hasValue(Sample.class);
+			assertThat(o_O.getEntityType()).isEqualTo(Sample.class);
 
 			assertThat(o_O.getMessage()).contains(Sample.class.getName());
 			assertThat(o_O.getMessage()).contains(Long.class.getName());

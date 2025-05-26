@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,11 @@
  */
 package org.springframework.data.repository.core.support;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.repository.core.EntityInformation;
-import org.springframework.lang.Nullable;
 
 /**
  * {@link EntityInformation} implementation that uses a {@link PersistentEntity} to obtain id type information and uses
@@ -40,10 +41,9 @@ public class PersistentEntityInformation<T, ID> implements EntityInformation<T, 
 		return persistentEntity.isNew(entity);
 	}
 
-	@Nullable
 	@Override
 	@SuppressWarnings("unchecked")
-	public ID getId(T entity) {
+	public @Nullable ID getId(T entity) {
 		return (ID) persistentEntity.getIdentifierAccessor(entity).getIdentifier();
 	}
 

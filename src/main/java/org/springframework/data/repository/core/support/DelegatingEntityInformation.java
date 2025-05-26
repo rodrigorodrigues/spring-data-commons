@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
  */
 package org.springframework.data.repository.core.support;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.repository.core.EntityInformation;
-import org.springframework.lang.Nullable;
 
 /**
  * Useful base class to implement custom {@link EntityInformation}s and delegate execution of standard methods from
@@ -42,9 +43,8 @@ public class DelegatingEntityInformation<T, ID> implements EntityInformation<T, 
 		return delegate.isNew(entity);
 	}
 
-	@Nullable
 	@Override
-	public ID getId(T entity) {
+	public @Nullable ID getId(T entity) {
 		return delegate.getId(entity);
 	}
 

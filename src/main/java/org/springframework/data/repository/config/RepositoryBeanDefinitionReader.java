@@ -15,78 +15,202 @@
  */
 package org.springframework.data.repository.config;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.PropertyValue;
+import org.springframework.beans.PropertyValues;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.config.ConstructorArgumentValues;
+import org.springframework.beans.factory.config.ConstructorArgumentValues.ValueHolder;
+import org.springframework.beans.factory.config.RuntimeBeanReference;
+import org.springframework.beans.factory.support.RegisteredBean;
+import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.repository.core.RepositoryInformation;
-import org.springframework.data.repository.core.support.DefaultRepositoryMetadata;
+import org.springframework.data.repository.core.RepositoryMetadata;
+import org.springframework.data.repository.core.support.AbstractRepositoryMetadata;
+import org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport;
 import org.springframework.data.repository.core.support.RepositoryFragment;
-import org.springframework.data.util.Lazy;
+import org.springframework.data.repository.core.support.RepositoryFragmentsContributor;
+import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.ObjectUtils;
 
 /**
  * Reader used to extract {@link RepositoryInformation} from {@link RepositoryConfiguration}.
  *
  * @author Christoph Strobl
  * @author John Blum
+ * @author Mark Paluch
  * @since 3.0
  */
 class RepositoryBeanDefinitionReader {
 
-	static RepositoryInformation readRepositoryInformation(RepositoryConfiguration<?> metadata,
-			ConfigurableListableBeanFactory beanFactory) {
+	private final RootBeanDefinition beanDefinition;
+	private final ConfigurableListableBeanFactory beanFactory;
+	private final ClassLoader beanClassLoader;
+	private final @Nullable RepositoryConfiguration<?> configuration;
+	private final @Nullable RepositoryConfigurationExtensionSupport extension;
 
-		return new AotRepositoryInformation(metadataSupplier(metadata, beanFactory),
-				repositoryBaseClass(metadata, beanFactory), fragments(metadata, beanFactory));
+	public RepositoryBeanDefinitionReader(RegisteredBean bean) {
+
+		this.beanDefinition = bean.getMergedBeanDefinition();
+		this.beanFactory = bean.getBeanFactory();
+		this.beanClassLoader = bean.getBeanClass().getClassLoader();
+		this.configuration = (RepositoryConfiguration<?>) beanDefinition
+				.getAttribute(RepositoryConfiguration.class.getName());
+		this.extension = (RepositoryConfigurationExtensionSupport) beanDefinition
+				.getAttribute(RepositoryConfigurationExtension.class.getName());
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private static Supplier<Collection<RepositoryFragment<?>>> fragments(RepositoryConfiguration<?> metadata,
-			ConfigurableListableBeanFactory beanFactory) {
+	public @Nullable RepositoryConfiguration<?> getConfiguration() {
+		return this.configuration;
+	}
 
-		if (metadata instanceof RepositoryFragmentConfigurationProvider provider) {
+	public @Nullable RepositoryConfigurationExtensionSupport getConfigurationExtension() {
+		return this.extension;
+	}
 
-			return Lazy.of(() -> {
-				return provider.getFragmentConfiguration().stream().flatMap(it -> {
+	/**
+	 * @return the {@link RepositoryInformation} derived from the repository bean.
+	 */
+	public RepositoryInformation getRepositoryInformation() {
 
-					List<RepositoryFragment<?>> fragments = new ArrayList<>(1);
+		Assert.notNull(configuration, "Configuration must not be null");
 
-					// TODO: Implemented accepts an Object, not a class.
-					fragments.add(RepositoryFragment.implemented(forName(it.getClassName(), beanFactory)));
-					fragments.add(RepositoryFragment.structural(forName(it.getInterfaceName(), beanFactory)));
+		RepositoryMetadata metadata = AbstractRepositoryMetadata
+				.getMetadata(forName(configuration.getRepositoryInterface()));
+		Class<?> repositoryBaseClass = getRepositoryBaseClass();
 
-					return fragments.stream();
-				}).collect(Collectors.toList());
-			});
+		List<RepositoryFragment<?>> fragments = new ArrayList<>();
+		fragments.addAll(readRepositoryFragments());
+		fragments.addAll(readContributedRepositoryFragments(metadata));
+
+		RepositoryFragment<?> customImplementation = getCustomImplementation();
+		if (customImplementation != null) {
+			fragments.add(0, customImplementation);
 		}
 
-		return Lazy.of(Collections::emptyList);
+		return new AotRepositoryInformation(metadata, repositoryBaseClass, fragments);
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private static Supplier<Class<?>> repositoryBaseClass(RepositoryConfiguration metadata,
-			ConfigurableListableBeanFactory beanFactory) {
+	private @Nullable RepositoryFragment<?> getCustomImplementation() {
 
-		return Lazy.of(() -> (Class<?>) metadata.getRepositoryBaseClassName().map(it -> forName(it.toString(), beanFactory))
-				.orElseGet(() -> {
-					// TODO: retrieve the default without loading the actual RepositoryBeanFactory
-					return Object.class;
-				}));
+		PropertyValues mpv = beanDefinition.getPropertyValues();
+		PropertyValue customImplementation = mpv.getPropertyValue("customImplementation");
+
+		if (customImplementation != null) {
+
+			if (customImplementation.getValue() instanceof RuntimeBeanReference rbr) {
+				BeanDefinition customImplementationBean = beanFactory.getBeanDefinition(rbr.getBeanName());
+				Class<?> beanType = getClass(customImplementationBean);
+				return RepositoryFragment.structural(beanType);
+			} else if (customImplementation.getValue() instanceof BeanDefinition bd) {
+				Class<?> beanType = getClass(bd);
+				return RepositoryFragment.structural(beanType);
+			}
+		}
+
+		return null;
 	}
 
-	private static Supplier<org.springframework.data.repository.core.RepositoryMetadata> metadataSupplier(
-			RepositoryConfiguration<?> metadata, ConfigurableListableBeanFactory beanFactory) {
-		return Lazy.of(() -> new DefaultRepositoryMetadata(forName(metadata.getRepositoryInterface(), beanFactory)));
+	@SuppressWarnings("NullAway")
+	private Class<?> getRepositoryBaseClass() {
+
+		Object repoBaseClassName = beanDefinition.getPropertyValues().get("repositoryBaseClass");
+
+		if (repoBaseClassName != null) {
+			return forName(repoBaseClassName.toString());
+		}
+
+		return Dummy.class;
 	}
 
-	static Class<?> forName(String name, ConfigurableListableBeanFactory beanFactory) {
+	@SuppressWarnings("NullAway")
+	private List<RepositoryFragment<?>> readRepositoryFragments() {
+
+		RuntimeBeanReference beanReference = (RuntimeBeanReference) beanDefinition.getPropertyValues()
+				.get("repositoryFragments");
+		BeanDefinition fragments = beanFactory.getBeanDefinition(beanReference.getBeanName());
+
+		ValueHolder fragmentBeanNameList = fragments.getConstructorArgumentValues().getArgumentValue(0, List.class);
+		List<String> fragmentBeanNames = (List<String>) fragmentBeanNameList.getValue();
+
+		List<RepositoryFragment<?>> fragmentList = new ArrayList<>();
+
+		for (String beanName : fragmentBeanNames) {
+
+			BeanDefinition fragmentBeanDefinition = beanFactory.getBeanDefinition(beanName);
+			ConstructorArgumentValues cv = fragmentBeanDefinition.getConstructorArgumentValues();
+			ValueHolder interfaceClassVh = cv.getArgumentValue(0, String.class);
+			ValueHolder implementationVh = cv.getArgumentValue(1, null, null, null);
+
+			Object fragmentClassName = interfaceClassVh.getValue();
+			Class<?> interfaceClass = forName(fragmentClassName.toString());
+
+			if (implementationVh != null && implementationVh.getValue() instanceof RuntimeBeanReference rbf) {
+				BeanDefinition implBeanDef = beanFactory.getBeanDefinition(rbf.getBeanName());
+				Class<?> implClass = getClass(implBeanDef);
+				fragmentList.add(RepositoryFragment.structural(interfaceClass, implClass));
+			} else {
+				fragmentList.add(RepositoryFragment.structural(interfaceClass));
+			}
+		}
+
+		return fragmentList;
+	}
+
+	private List<RepositoryFragment<?>> readContributedRepositoryFragments(RepositoryMetadata metadata) {
+
+		RepositoryFragmentsContributor contributor = getFragmentsContributor(metadata.getRepositoryInterface());
+		return contributor.describe(metadata).stream().toList();
+	}
+
+	private RepositoryFragmentsContributor getFragmentsContributor(Class<?> repositoryInterface) {
+
+		Object repositoryFragmentsContributor = beanDefinition.getPropertyValues().get("repositoryFragmentsContributor");
+
+		if (repositoryFragmentsContributor instanceof BeanDefinition bd) {
+			return (RepositoryFragmentsContributor) BeanUtils.instantiateClass(getClass(bd));
+		}
+
+		Assert.state(beanDefinition.getBeanClassName() != null, "No Repository BeanFactory set");
+
+		Class<?> repositoryFactoryBean = forName(beanDefinition.getBeanClassName());
+		Constructor<?> constructor = ClassUtils.getConstructorIfAvailable(repositoryFactoryBean, Class.class);
+
+		if (constructor == null) {
+			throw new IllegalStateException("No constructor accepting Class in " + repositoryFactoryBean.getName());
+		}
+		RepositoryFactoryBeanSupport<?, ?, ?> factoryBean = (RepositoryFactoryBeanSupport<?, ?, ?>) BeanUtils
+				.instantiateClass(constructor, repositoryInterface);
+
+		return factoryBean.getRepositoryFragmentsContributor();
+	}
+
+	private Class<?> getClass(BeanDefinition definition) {
+
+		String beanClassName = definition.getBeanClassName();
+
+		if (ObjectUtils.isEmpty(beanClassName)) {
+			throw new IllegalStateException("No bean class name specified for %s".formatted(definition));
+		}
+
+		return forName(beanClassName);
+	}
+
+	static abstract class Dummy implements CrudRepository<Object, Object>, PagingAndSortingRepository<Object, Object> {}
+
+	private Class<?> forName(String name) {
 		try {
-			return ClassUtils.forName(name, beanFactory.getBeanClassLoader());
+			return ClassUtils.forName(name, beanClassLoader);
 		} catch (ClassNotFoundException cause) {
 			throw new TypeNotPresentException(name, cause);
 		}

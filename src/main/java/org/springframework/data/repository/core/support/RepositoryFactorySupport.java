@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,8 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.interceptor.ExposeInvocationInterceptor;
 import org.springframework.beans.BeanUtils;
@@ -62,21 +64,19 @@ import org.springframework.data.repository.core.RepositoryMethodContextHolder;
 import org.springframework.data.repository.core.support.RepositoryComposition.RepositoryFragments;
 import org.springframework.data.repository.core.support.RepositoryInvocationMulticaster.DefaultRepositoryInvocationMulticaster;
 import org.springframework.data.repository.core.support.RepositoryInvocationMulticaster.NoOpRepositoryInvocationMulticaster;
-import org.springframework.data.repository.query.ExtensionAwareQueryMethodEvaluationContextProvider;
 import org.springframework.data.repository.query.QueryLookupStrategy;
 import org.springframework.data.repository.query.QueryLookupStrategy.Key;
 import org.springframework.data.repository.query.QueryMethod;
-import org.springframework.data.repository.query.QueryMethodEvaluationContextProvider;
 import org.springframework.data.repository.query.QueryMethodValueEvaluationContextAccessor;
 import org.springframework.data.repository.query.RepositoryQuery;
 import org.springframework.data.repository.query.ValueExpressionDelegate;
 import org.springframework.data.repository.util.QueryExecutionConverters;
 import org.springframework.data.spel.EvaluationContextProvider;
 import org.springframework.data.util.Lazy;
+import org.springframework.data.util.NullnessMethodInvocationValidator;
 import org.springframework.data.util.ReflectionUtils;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.interceptor.TransactionalProxy;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -94,7 +94,6 @@ import org.springframework.util.ObjectUtils;
  * @author John Blum
  * @author Johannes Englmeier
  */
-@SuppressWarnings("removal")
 public abstract class RepositoryFactorySupport
 		implements BeanClassLoaderAware, BeanFactoryAware, EnvironmentAware, EnvironmentCapable {
 
@@ -109,27 +108,26 @@ public abstract class RepositoryFactorySupport
 		CONVERSION_SERVICE.removeConvertible(Object.class, Object.class);
 	}
 
-	private final Map<RepositoryInformationCacheKey, RepositoryInformation> repositoryInformationCache;
+	private final Map<RepositoryInformationCacheKey, RepositoryStub> repositoryInformationCache;
 	private final List<RepositoryProxyPostProcessor> postProcessors;
 
 	private @Nullable Class<?> repositoryBaseClass;
 	private boolean exposeMetadata;
-	private @Nullable QueryLookupStrategy.Key queryLookupStrategyKey;
+	private QueryLookupStrategy.@Nullable Key queryLookupStrategyKey;
 	private final List<QueryCreationListener<?>> queryPostProcessors;
 	private final List<RepositoryMethodInvocationListener> methodInvocationListeners;
 	private NamedQueries namedQueries;
-	private ClassLoader classLoader;
+	private @Nullable ClassLoader classLoader;
 	private EvaluationContextProvider evaluationContextProvider;
-	private BeanFactory beanFactory;
-	private Environment environment;
+	private @Nullable BeanFactory beanFactory;
+	private @Nullable Environment environment;
 	private Lazy<ProjectionFactory> projectionFactory;
 
 	private final QueryCollectingQueryCreationListener collectingListener = new QueryCollectingQueryCreationListener();
 
-	@SuppressWarnings("null")
 	public RepositoryFactorySupport() {
 
-		this.repositoryInformationCache = new HashMap<>(16);
+		this.repositoryInformationCache = new HashMap<>(8);
 		this.postProcessors = new ArrayList<>();
 
 		this.namedQueries = PropertiesBasedNamedQueries.EMPTY;
@@ -170,7 +168,7 @@ public abstract class RepositoryFactorySupport
 	 *
 	 * @param key
 	 */
-	public void setQueryLookupStrategyKey(Key key) {
+	public void setQueryLookupStrategyKey(@Nullable Key key) {
 		this.queryLookupStrategyKey = key;
 	}
 
@@ -208,20 +206,6 @@ public abstract class RepositoryFactorySupport
 		}
 
 		return this.environment;
-	}
-
-	/**
-	 * Sets the {@link QueryMethodEvaluationContextProvider} to be used to evaluate SpEL expressions in manually defined
-	 * queries.
-	 *
-	 * @param evaluationContextProvider can be {@literal null}, defaults to
-	 *          {@link QueryMethodEvaluationContextProvider#DEFAULT}.
-	 * @deprecated since 3.4, use {@link #setEvaluationContextProvider(EvaluationContextProvider)} instead.
-	 */
-	@Deprecated(since = "3.4", forRemoval = true)
-	public void setEvaluationContextProvider(@Nullable QueryMethodEvaluationContextProvider evaluationContextProvider) {
-		setEvaluationContextProvider(evaluationContextProvider == null ? EvaluationContextProvider.DEFAULT
-				: evaluationContextProvider.getEvaluationContextProvider());
 	}
 
 	/**
@@ -294,16 +278,6 @@ public abstract class RepositoryFactorySupport
 	}
 
 	/**
-	 * Creates {@link RepositoryComposition} based on {@link RepositoryMetadata} for repository-specific method handling.
-	 *
-	 * @param metadata the repository metadata to use.
-	 * @return repository composition.
-	 */
-	private RepositoryComposition getRepositoryComposition(RepositoryMetadata metadata) {
-		return RepositoryComposition.fromMetadata(metadata);
-	}
-
-	/**
 	 * Returns a repository instance for the given interface.
 	 *
 	 * @param repositoryInterface must not be {@literal null}.
@@ -334,7 +308,7 @@ public abstract class RepositoryFactorySupport
 	 * @return the implemented repository interface.
 	 * @since 2.0
 	 */
-	@SuppressWarnings({ "unchecked" })
+	@SuppressWarnings({ "unchecked", "deprecation" })
 	public <T> T getRepository(Class<T> repositoryInterface, RepositoryFragments fragments) {
 
 		if (logger.isDebugEnabled()) {
@@ -361,8 +335,9 @@ public abstract class RepositoryFactorySupport
 				repositoryInterface);
 		repositoryCompositionStep.tag("fragment.count", String.valueOf(fragments.size()));
 
-		RepositoryComposition composition = getRepositoryComposition(metadata, fragments);
-		RepositoryInformation information = getRepositoryInformation(metadata, composition);
+		RepositoryStub stub = getRepositoryStub(metadata, fragments);
+		RepositoryComposition composition = stub.composition();
+		RepositoryInformation information = stub.information();
 
 		repositoryCompositionStep.tag("fragments", () -> {
 
@@ -399,7 +374,7 @@ public abstract class RepositoryFactorySupport
 		result.setTarget(target);
 		result.setInterfaces(repositoryInterface, Repository.class, TransactionalProxy.class);
 
-		if (MethodInvocationValidator.supports(repositoryInterface)) {
+		if (NullnessMethodInvocationValidator.supports(repositoryInterface)) {
 			if (logger.isTraceEnabled()) {
 				logger.trace(LogMessage.format("Register MethodInvocationValidator for %s…", repositoryInterface.getName()));
 			}
@@ -437,9 +412,9 @@ public abstract class RepositoryFactorySupport
 		}
 
 		Optional<QueryLookupStrategy> queryLookupStrategy = getQueryLookupStrategy(queryLookupStrategyKey,
-				new ValueExpressionDelegate(
-						new QueryMethodValueEvaluationContextAccessor(getEnvironment(), evaluationContextProvider), VALUE_PARSER));
-		result.addAdvice(new QueryExecutorMethodInterceptor(information, getProjectionFactory(), queryLookupStrategy,
+				getValueExpressionDelegate());
+		result.addAdvice(new QueryExecutorMethodInterceptor(information, getProjectionFactory(),
+				queryLookupStrategy.orElse(null),
 				namedQueries, queryPostProcessors, methodInvocationListeners));
 
 		result.addAdvice(
@@ -457,6 +432,11 @@ public abstract class RepositoryFactorySupport
 		return repository;
 	}
 
+	ValueExpressionDelegate getValueExpressionDelegate() {
+		return new ValueExpressionDelegate(
+				new QueryMethodValueEvaluationContextAccessor(getEnvironment(), evaluationContextProvider), VALUE_PARSER);
+	}
+
 	/**
 	 * Returns the {@link ProjectionFactory} to be used with the repository instances created.
 	 *
@@ -464,11 +444,18 @@ public abstract class RepositoryFactorySupport
 	 * @param beanFactory will never be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	protected ProjectionFactory getProjectionFactory(ClassLoader classLoader, BeanFactory beanFactory) {
+	protected ProjectionFactory getProjectionFactory(@Nullable ClassLoader classLoader,
+			@Nullable BeanFactory beanFactory) {
 
 		SpelAwareProxyProjectionFactory factory = new SpelAwareProxyProjectionFactory(EXPRESSION_PARSER);
-		factory.setBeanClassLoader(classLoader);
-		factory.setBeanFactory(beanFactory);
+
+		if (classLoader != null) {
+			factory.setBeanClassLoader(classLoader);
+		}
+
+		if (beanFactory != null) {
+			factory.setBeanFactory(beanFactory);
+		}
 
 		return factory;
 	}
@@ -492,47 +479,36 @@ public abstract class RepositoryFactorySupport
 	 * @return will never be {@literal null}.
 	 */
 	protected RepositoryInformation getRepositoryInformation(RepositoryMetadata metadata, RepositoryFragments fragments) {
-		return getRepositoryInformation(metadata, getRepositoryComposition(metadata, fragments));
+		return getRepositoryStub(metadata, fragments).information();
 	}
 
 	/**
-	 * Returns the {@link RepositoryComposition} for the given {@link RepositoryMetadata} and extra
-	 * {@link RepositoryFragments}.
-	 *
-	 * @param metadata must not be {@literal null}.
-	 * @param fragments must not be {@literal null}.
-	 * @return will never be {@literal null}.
-	 */
-	private RepositoryComposition getRepositoryComposition(RepositoryMetadata metadata, RepositoryFragments fragments) {
-
-		Assert.notNull(metadata, "RepositoryMetadata must not be null");
-		Assert.notNull(fragments, "RepositoryFragments must not be null");
-
-		RepositoryComposition composition = getRepositoryComposition(metadata);
-		RepositoryFragments repositoryAspects = getRepositoryFragments(metadata);
-
-		return composition.append(fragments).append(repositoryAspects);
-	}
-
-	/**
-	 * Returns the {@link RepositoryInformation} for the given repository interface.
+	 * Returns the cached {@link RepositoryStub} for the given repository and composition. {@link RepositoryMetadata} is a
+	 * strong cache key while {@link RepositoryFragments} contributes a light-weight caching component by using only the
+	 * fragments hash code. In a typical Spring scenario, that shouldn't impose issues as one repository factory produces
+	 * only a single repository instance for one repository interface. Things might be different when using various
+	 * fragments for the same repository interface.
 	 *
 	 * @param metadata
-	 * @param composition
+	 * @param fragments
 	 * @return
 	 */
-	private RepositoryInformation getRepositoryInformation(RepositoryMetadata metadata,
-			RepositoryComposition composition) {
+	private RepositoryStub getRepositoryStub(RepositoryMetadata metadata, RepositoryFragments fragments) {
 
-		RepositoryInformationCacheKey cacheKey = new RepositoryInformationCacheKey(metadata, composition);
+		RepositoryInformationCacheKey cacheKey = new RepositoryInformationCacheKey(metadata, fragments);
 
 		synchronized (repositoryInformationCache) {
 
 			return repositoryInformationCache.computeIfAbsent(cacheKey, key -> {
 
+				RepositoryComposition composition = RepositoryComposition.fromMetadata(metadata);
+				RepositoryFragments repositoryAspects = getRepositoryFragments(metadata);
+
+				composition = composition.append(fragments).append(repositoryAspects);
+
 				Class<?> baseClass = repositoryBaseClass != null ? repositoryBaseClass : getRepositoryBaseClass(metadata);
 
-				return new DefaultRepositoryInformation(metadata, baseClass, composition);
+				return new RepositoryStub(new DefaultRepositoryInformation(metadata, baseClass, composition), composition);
 			});
 		}
 	}
@@ -558,8 +534,23 @@ public abstract class RepositoryFactorySupport
 	 * @param <ID> the id type
 	 * @param domainClass
 	 * @return
+	 * @deprecated since 4.0, use {@link #getEntityInformation(RepositoryMetadata)} instead.
 	 */
-	public abstract <T, ID> EntityInformation<T, ID> getEntityInformation(Class<T> domainClass);
+	@Deprecated(since = "4.0")
+	public <T, ID> EntityInformation<T, ID> getEntityInformation(Class<T> domainClass) {
+		throw new UnsupportedOperationException("getEntityInformation is not implemented");
+	}
+
+	/**
+	 * Returns the {@link EntityInformation} for the given {@link RepositoryMetadata}.
+	 *
+	 * @param metadata must not be {@literal null}.
+	 * @return the {@link EntityInformation} to be used for {@link RepositoryMetadata}.
+	 * @since 4.0
+	 */
+	public EntityInformation<?, ?> getEntityInformation(RepositoryMetadata metadata) {
+		return getEntityInformation(metadata.getDomainType());
+	}
 
 	/**
 	 * Create a repository instance as backing for the query proxy.
@@ -579,28 +570,7 @@ public abstract class RepositoryFactorySupport
 	protected abstract Class<?> getRepositoryBaseClass(RepositoryMetadata metadata);
 
 	/**
-	 * Returns the {@link QueryLookupStrategy} for the given {@link Key} and {@link QueryMethodEvaluationContextProvider}.
-	 *
-	 * @param key can be {@literal null}.
-	 * @param evaluationContextProvider will never be {@literal null}.
-	 * @return the {@link QueryLookupStrategy} to use or {@literal null} if no queries should be looked up.
-	 * @since 1.9
-	 * @deprecated since 3.4, use {@link #getQueryLookupStrategy(Key, ValueExpressionDelegate)} instead to support
-	 *             {@link org.springframework.data.expression.ValueExpression} in query methods.
-	 */
-	@Deprecated(since = "3.4", forRemoval = true)
-	protected Optional<QueryLookupStrategy> getQueryLookupStrategy(@Nullable Key key,
-			QueryMethodEvaluationContextProvider evaluationContextProvider) {
-		return Optional.empty();
-	}
-
-	/**
-	 * Returns the {@link QueryLookupStrategy} for the given {@link Key} and {@link ValueExpressionDelegate}. Favor
-	 * implementing this method over {@link #getQueryLookupStrategy(Key, QueryMethodEvaluationContextProvider)} for
-	 * extended {@link org.springframework.data.expression.ValueExpression} support.
-	 * <p>
-	 * This method delegates to {@link #getQueryLookupStrategy(Key, QueryMethodEvaluationContextProvider)} unless
-	 * overridden.
+	 * Returns the {@link QueryLookupStrategy} for the given {@link Key} and {@link ValueExpressionDelegate}.
 	 *
 	 * @param key can be {@literal null}.
 	 * @param valueExpressionDelegate will never be {@literal null}.
@@ -609,8 +579,7 @@ public abstract class RepositoryFactorySupport
 	 */
 	protected Optional<QueryLookupStrategy> getQueryLookupStrategy(@Nullable Key key,
 			ValueExpressionDelegate valueExpressionDelegate) {
-		return getQueryLookupStrategy(key,
-				new ExtensionAwareQueryMethodEvaluationContextProvider(evaluationContextProvider));
+		return Optional.empty();
 	}
 
 	/**
@@ -646,21 +615,6 @@ public abstract class RepositoryFactorySupport
 	}
 
 	/**
-	 * Creates a repository of the repository base class defined in the given {@link RepositoryInformation} using
-	 * reflection.
-	 *
-	 * @param baseClass
-	 * @param constructorArguments
-	 * @return
-	 * @deprecated since 2.6 because it has a misleading name. Use {@link #instantiateClass(Class, Object...)} instead.
-	 */
-	@SuppressWarnings("unchecked")
-	@Deprecated
-	protected final <R> R getTargetRepositoryViaReflection(Class<?> baseClass, Object... constructorArguments) {
-		return instantiateClass(baseClass, constructorArguments);
-	}
-
-	/**
 	 * Convenience method to instantiate a class using the given {@code constructorArguments} by looking up a matching
 	 * constructor.
 	 * <p>
@@ -675,13 +629,16 @@ public abstract class RepositoryFactorySupport
 	@SuppressWarnings("unchecked")
 	protected final <R> R instantiateClass(Class<?> baseClass, Object... constructorArguments) {
 
-		Optional<Constructor<?>> constructor = ReflectionUtils.findConstructor(baseClass, constructorArguments);
+		Constructor<?> constructor = ReflectionUtils.findConstructor(baseClass, constructorArguments);
 
-		return constructor.map(it -> (R) BeanUtils.instantiateClass(it, constructorArguments))
-				.orElseThrow(() -> new IllegalStateException(String.format(
-						"No suitable constructor found on %s to match the given arguments: %s. Make sure you implement a constructor taking these",
-						baseClass, Arrays.stream(constructorArguments).map(Object::getClass).map(ClassUtils::getQualifiedName)
-								.collect(Collectors.joining(", ")))));
+		if (constructor == null) {
+			throw new IllegalStateException(String.format(
+					"No suitable constructor found on %s to match the given arguments: %s. Make sure you implement a constructor taking these",
+					baseClass, Arrays.stream(constructorArguments).map(Object::getClass).map(ClassUtils::getQualifiedName)
+							.collect(Collectors.joining(", "))));
+		}
+
+		return (R) BeanUtils.instantiateClass(constructor, constructorArguments);
 	}
 
 	private ApplicationStartup getStartup() {
@@ -731,21 +688,18 @@ public abstract class RepositoryFactorySupport
 	 */
 	static class ImplementationMethodExecutionInterceptor implements MethodInterceptor {
 
-		private final RepositoryInformation information;
 		private final RepositoryComposition composition;
 		private final RepositoryInvocationMulticaster invocationMulticaster;
 
 		public ImplementationMethodExecutionInterceptor(RepositoryInformation information,
 				RepositoryComposition composition, List<RepositoryMethodInvocationListener> methodInvocationListeners) {
-			this.information = information;
 			this.composition = composition;
 			this.invocationMulticaster = methodInvocationListeners.isEmpty() ? NoOpRepositoryInvocationMulticaster.INSTANCE
 					: new DefaultRepositoryInvocationMulticaster(methodInvocationListeners);
 		}
 
-		@Nullable
 		@Override
-		public Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
+		public @Nullable Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
 
 			Method method = invocation.getMethod();
 			Object[] arguments = invocation.getArguments();
@@ -753,6 +707,7 @@ public abstract class RepositoryFactorySupport
 			try {
 				return composition.invoke(invocationMulticaster, method, arguments);
 			} catch (Exception ex) {
+
 				if (ex instanceof InvocationTargetException) {
 					throw ((InvocationTargetException) ex).getTargetException();
 				}
@@ -773,9 +728,8 @@ public abstract class RepositoryFactorySupport
 			this.repositoryMetadata = repositoryMetadata;
 		}
 
-		@Nullable
 		@Override
-		public Object invoke(MethodInvocation invocation) throws Throwable {
+		public @Nullable Object invoke(MethodInvocation invocation) throws Throwable {
 
 			RepositoryMethodContext oldMetadata = null;
 
@@ -816,6 +770,18 @@ public abstract class RepositoryFactorySupport
 	}
 
 	/**
+	 * Repository stub holding {@link RepositoryInformation} and {@link RepositoryComposition}.
+	 *
+	 * @param information
+	 * @param composition
+	 * @author Mark Paluch
+	 * @since 3.4.4
+	 */
+	record RepositoryStub(RepositoryInformation information, RepositoryComposition composition) {
+
+	}
+
+	/**
 	 * Simple value object to build up keys to cache {@link RepositoryInformation} instances.
 	 *
 	 * @author Oliver Gierke
@@ -824,31 +790,26 @@ public abstract class RepositoryFactorySupport
 	private static final class RepositoryInformationCacheKey {
 
 		private final String repositoryInterfaceName;
-		private final long compositionHash;
+		private final long fragmentsHash;
 
 		/**
-		 * Creates a new {@link RepositoryInformationCacheKey} for the given {@link RepositoryMetadata} and composition.
+		 * Creates a new {@link RepositoryInformationCacheKey} for the given {@link RepositoryMetadata} and fragments.
 		 *
 		 * @param metadata must not be {@literal null}.
-		 * @param composition must not be {@literal null}.
+		 * @param fragments must not be {@literal null}.
 		 */
-		public RepositoryInformationCacheKey(RepositoryMetadata metadata, RepositoryComposition composition) {
+		public RepositoryInformationCacheKey(RepositoryMetadata metadata, RepositoryFragments fragments) {
 
 			this.repositoryInterfaceName = metadata.getRepositoryInterface().getName();
-			this.compositionHash = composition.hashCode();
-		}
-
-		public RepositoryInformationCacheKey(String repositoryInterfaceName, long compositionHash) {
-			this.repositoryInterfaceName = repositoryInterfaceName;
-			this.compositionHash = compositionHash;
+			this.fragmentsHash = fragments.getFragments().hashCode();
 		}
 
 		public String getRepositoryInterfaceName() {
 			return this.repositoryInterfaceName;
 		}
 
-		public long getCompositionHash() {
-			return this.compositionHash;
+		public long getFragmentsHash() {
+			return this.fragmentsHash;
 		}
 
 		@Override
@@ -859,7 +820,7 @@ public abstract class RepositoryFactorySupport
 			if (!(o instanceof RepositoryInformationCacheKey that)) {
 				return false;
 			}
-			if (compositionHash != that.compositionHash) {
+			if (fragmentsHash != that.fragmentsHash) {
 				return false;
 			}
 			return ObjectUtils.nullSafeEquals(repositoryInterfaceName, that.repositoryInterfaceName);
@@ -868,14 +829,14 @@ public abstract class RepositoryFactorySupport
 		@Override
 		public int hashCode() {
 			int result = ObjectUtils.nullSafeHashCode(repositoryInterfaceName);
-			result = 31 * result + (int) (compositionHash ^ (compositionHash >>> 32));
+			result = 31 * result + Long.hashCode(fragmentsHash);
 			return result;
 		}
 
 		@Override
 		public String toString() {
 			return "RepositoryFactorySupport.RepositoryInformationCacheKey(repositoryInterfaceName="
-					+ this.getRepositoryInterfaceName() + ", compositionHash=" + this.getCompositionHash() + ")";
+					+ this.getRepositoryInterfaceName() + ", fragmentsHash=" + this.getFragmentsHash() + ")";
 		}
 	}
 

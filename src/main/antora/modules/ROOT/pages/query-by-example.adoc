@@ -1,3 +1,7 @@
+ifndef::support-qbe-collection[]
+:support-qbe-collection: true
+endif::[]
+
 [[query-by-example]]
 = Query by Example
 
@@ -36,6 +40,9 @@ Query by Example is well suited for several use cases:
 Query by Example also has several limitations:
 
 * No support for nested or grouped property constraints, such as `firstname = ?0 or (firstname = ?1 and lastname = ?2)`.
+ifeval::[{support-qbe-collection} != true]
+* No support for matching collections or maps.
+endif::[]
 * Store-specific support on string matching.
 Depending on your databases, String matching can support starts/contains/ends/regex for strings.
 * Exact matching for other property types.
@@ -200,7 +207,7 @@ You do so by invoking the various methods of the `FetchableFluentQuery` in the s
 `sortBy` lets you specify an ordering for your result.
 `as` lets you specify the type to which you want the result to be transformed.
 `project` limits the queried attributes.
-`first`, `firstValue`, `one`, `oneValue`, `all`, `page`, `stream`, `count`, and `exists` define what kind of result you get and how the query behaves when more than the expected number of results are available.
+`first`, `firstValue`, `one`, `oneValue`, `all`, `page`, `slice`, `stream`, `count`, and `exists` define what kind of result you get and how the query behaves when more than the expected number of results are available.
 
 
 .Use the fluent API to get the last of potentially many results, ordered by lastname.

@@ -457,10 +457,10 @@ ifdef::feature-scroll[]
 | `limit + 1` at `OffsetScrollPosition.getOffset()`
 | One to many queries fetching data starting at `OffsetScrollPosition.getOffset()` applying limiting.
 a| A `Window` can only navigate to the next `Window`.
-endif::[]
 
 * `Window` provides details whether there is more data to fetch.
 * Offset-based queries becomes inefficient when the offset is too large because the database still has to materialize the full result.
+endif::[]
 
 | `Page<T>`
 | `Pageable.getPageSize()`  at `Pageable.getOffset()`
@@ -518,8 +518,6 @@ QSort sort = QSort.by(QPerson.firstname.asc())
   .and(QSort.by(QPerson.lastname.desc()));
 ----
 
-ifdef::feature-scroll[]
-endif::[]
 
 [[repositories.limit-query-result]]
 === Limiting Query Results
@@ -533,15 +531,15 @@ The following example shows how to limit the query size:
 .Limiting the result size of a query with `Top` and `First`
 [source,java]
 ----
-List<User> findByLastname(Limit limit);
+List<User> findByLastname(String lastname, Limit limit);
 
 User findFirstByOrderByLastnameAsc();
 
-User findTopByOrderByAgeDesc();
+User findTopByLastnameOrderByAgeDesc(String lastname);
 
 Page<User> queryFirst10ByLastname(String lastname, Pageable pageable);
 
-Slice<User> findTop3ByLastname(String lastname, Pageable pageable);
+Slice<User> findTop3By(Pageable pageable);
 
 List<User> findFirst10ByLastname(String lastname, Sort sort);
 

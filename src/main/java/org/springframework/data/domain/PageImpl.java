@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,13 @@
  */
 package org.springframework.data.domain;
 
+import java.io.Serial;
 import java.util.List;
 import java.util.function.Function;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
+import org.springframework.util.CollectionUtils;
 
 /**
  * Basic {@code Page} implementation.
@@ -29,7 +32,7 @@ import org.springframework.lang.Nullable;
  */
 public class PageImpl<T> extends Chunk<T> implements Page<T> {
 
-	private static final long serialVersionUID = 867755909294344406L;
+	private static final @Serial long serialVersionUID = 867755909294344406L;
 
 	private final long total;
 
@@ -58,7 +61,7 @@ public class PageImpl<T> extends Chunk<T> implements Page<T> {
 	 * @param content must not be {@literal null}.
 	 */
 	public PageImpl(List<T> content) {
-		this(content, Pageable.unpaged(), null == content ? 0 : content.size());
+		this(content, Pageable.unpaged(), CollectionUtils.isEmpty(content) ? 0 : content.size());
 	}
 
 	@Override
@@ -87,19 +90,6 @@ public class PageImpl<T> extends Chunk<T> implements Page<T> {
 	}
 
 	@Override
-	public String toString() {
-
-		String contentType = "UNKNOWN";
-		List<T> content = getContent();
-
-		if (!content.isEmpty() && content.get(0) != null) {
-			contentType = content.get(0).getClass().getName();
-		}
-
-		return String.format("Page %s of %d containing %s instances", getNumber() + 1, getTotalPages(), contentType);
-	}
-
-	@Override
 	public boolean equals(@Nullable Object obj) {
 
 		if (this == obj) {
@@ -115,12 +105,19 @@ public class PageImpl<T> extends Chunk<T> implements Page<T> {
 
 	@Override
 	public int hashCode() {
+		return 31 * super.hashCode() + Long.hashCode(total);
+	}
 
-		int result = 17;
+	@Override
+	public String toString() {
 
-		result += 31 * (int) (total ^ total >>> 32);
-		result += 31 * super.hashCode();
+		String contentType = "UNKNOWN";
+		List<T> content = getContent();
 
-		return result;
+		if (!content.isEmpty() && content.get(0) != null) {
+			contentType = content.get(0).getClass().getName();
+		}
+
+		return String.format("Page %s of %d containing %s instances", getNumber() + 1, getTotalPages(), contentType);
 	}
 }

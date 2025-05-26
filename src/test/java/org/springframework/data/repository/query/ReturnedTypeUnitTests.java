@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -165,6 +165,25 @@ class ReturnedTypeUnitTests {
 		var right = ReturnedType.of(Child.class, Object.class, factory);
 
 		assertThat(left).isSameAs(right);
+	}
+
+	@Test // GH-3225
+	void detectsKotlinInputProperties() {
+
+		var factory = new SpelAwareProxyProjectionFactory();
+
+		var returnedType = ReturnedType.of(SomeDataClass.class, Sample.class, factory);
+
+		assertThat(returnedType.getInputProperties()).containsExactly("firstname", "lastname");
+	}
+
+	@Test // GH-3225
+	void detectsKotlinValueClassInputProperties() {
+
+		var factory = new SpelAwareProxyProjectionFactory();
+
+		var returnedType = ReturnedType.of(SomeDataClassWithValues.class, Sample.class, factory);
+		assertThat(returnedType.getInputProperties()).containsExactly("email", "firstname", "lastname");
 	}
 
 	private static ReturnedType getReturnedType(String methodName, Class<?>... parameters) throws Exception {

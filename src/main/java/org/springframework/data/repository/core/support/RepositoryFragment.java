@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2024 the original author or authors.
+ * Copyright 2017-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,14 @@
 package org.springframework.data.repository.core.support;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
@@ -80,6 +83,18 @@ public interface RepositoryFragment<T> {
 	}
 
 	/**
+	 * Create a structural {@link RepositoryFragment} given {@code interfaceClass} and {@code implementationClass}.
+	 *
+	 * @param interfaceClass must not be {@literal null}.
+	 * @param implementationClass must not be {@literal null}.
+	 * @return
+	 * @since 4.0
+	 */
+	static <T> RepositoryFragment<T> structural(Class<T> interfaceClass, Class<?> implementationClass) {
+		return new StructuralRepositoryFragment<>(interfaceClass, implementationClass);
+	}
+
+	/**
 	 * Attempt to find the {@link Method} by name and exact parameters. Returns {@literal true} if the method was found or
 	 * {@literal false} otherwise.
 	 *
@@ -101,11 +116,29 @@ public interface RepositoryFragment<T> {
 	}
 
 	/**
+	 * @return the optional implementation class. Only available for fragments that ship an implementation descriptor.
+	 *         Structural (interface-only) fragments return always {@link Optional#empty()}.
+	 * @since 4.0
+	 */
+	default Optional<Class<?>> getImplementationClass() {
+		return getImplementation().map(it -> it.getClass());
+	}
+
+	/**
 	 * @return a {@link Stream} of methods exposed by this {@link RepositoryFragment}.
 	 */
 	default Stream<Method> methods() {
 		return Arrays.stream(getSignatureContributor().getMethods());
 	}
+
+	/**
+	 * Find methods that match the given name. The method name must be exact.
+	 *
+	 * @param name the method name.
+	 * @return list of candidate methods.
+	 * @since 4.0
+	 */
+	List<Method> findMethods(String name);
 
 	/**
 	 * @return the class/interface providing signatures for this {@link RepositoryFragment}.
@@ -121,46 +154,131 @@ public interface RepositoryFragment<T> {
 	 */
 	RepositoryFragment<T> withImplementation(T implementation);
 
+	private static List<Method> findMethods(String name, Method[] candidates) {
+
+		Method firstMatch = null;
+
+		for (Method method : candidates) {
+			if (method.getName().equals(name)) {
+
+				if (firstMatch != null) {
+					firstMatch = null;
+					break;
+				}
+				firstMatch = method;
+			}
+		}
+
+		if (firstMatch != null) {
+			return List.of(firstMatch);
+		}
+
+		List<Method> results = new ArrayList<>(candidates.length);
+
+		for (Method method : candidates) {
+			if (method.getName().equals(name)) {
+				results.add(method);
+			}
+		}
+
+		return results;
+	}
+
+	private static boolean hasMethod(Method method, Method[] candidates) {
+
+		for (Method candidate : candidates) {
+
+			if (!candidate.getName().equals(method.getName())) {
+				continue;
+			}
+
+			if (candidate.getParameterCount() != method.getParameterCount()) {
+				continue;
+
+			}
+
+			if (Arrays.equals(candidate.getParameterTypes(), method.getParameterTypes())) {
+				return true;
+			}
+
+		}
+		return false;
+	}
+
 	class StructuralRepositoryFragment<T> implements RepositoryFragment<T> {
 
-		private final Class<T> interfaceOrImplementation;
+		private final Class<T> interfaceClass;
+		private final Class<?> implementationClass;
+		private final Method[] methods;
 
 		public StructuralRepositoryFragment(Class<T> interfaceOrImplementation) {
-			this.interfaceOrImplementation = interfaceOrImplementation;
+			this.interfaceClass = interfaceOrImplementation;
+			this.implementationClass = interfaceOrImplementation;
+			this.methods = interfaceOrImplementation.getMethods();
+		}
+
+		public StructuralRepositoryFragment(Class<T> interfaceClass, Class<?> implementationClass) {
+			this.interfaceClass = interfaceClass;
+			this.implementationClass = implementationClass;
+			this.methods = interfaceClass.getMethods();
 		}
 
 		@Override
 		public Class<?> getSignatureContributor() {
-			return interfaceOrImplementation;
+			return interfaceClass;
+		}
+
+		@Override
+		public Optional<Class<?>> getImplementationClass() {
+			return Optional.of(implementationClass);
+		}
+
+		@Override
+		public Stream<Method> methods() {
+			return Arrays.stream(methods);
+		}
+
+		@Override
+		public List<Method> findMethods(String name) {
+			return RepositoryFragment.findMethods(name, methods);
+		}
+
+		@Override
+		public boolean hasMethod(Method method) {
+
+			if (RepositoryFragment.hasMethod(method, this.methods)) {
+				return true;
+			}
+
+			return RepositoryFragment.super.hasMethod(method);
 		}
 
 		@Override
 		public RepositoryFragment<T> withImplementation(T implementation) {
-			return new ImplementedRepositoryFragment<>(interfaceOrImplementation, implementation);
+			return new ImplementedRepositoryFragment<>(interfaceClass, implementation);
 		}
 
 		@Override
 		public String toString() {
-			return String.format("StructuralRepositoryFragment %s", ClassUtils.getShortName(interfaceOrImplementation));
+			return String.format("StructuralRepositoryFragment %s", ClassUtils.getShortName(interfaceClass));
 		}
 
 		@Override
 		public boolean equals(Object o) {
-
-			if (this == o) {
-				return true;
-			}
-
 			if (!(o instanceof StructuralRepositoryFragment<?> that)) {
 				return false;
 			}
 
-			return ObjectUtils.nullSafeEquals(interfaceOrImplementation, that.interfaceOrImplementation);
+			if (!ObjectUtils.nullSafeEquals(interfaceClass, that.interfaceClass)) {
+				return false;
+			}
+
+			return ObjectUtils.nullSafeEquals(implementationClass, that.implementationClass);
 		}
 
 		@Override
 		public int hashCode() {
-			return ObjectUtils.nullSafeHashCode(interfaceOrImplementation);
+			return ObjectUtils.nullSafeHash(interfaceClass, implementationClass);
 		}
 	}
 
@@ -168,18 +286,7 @@ public interface RepositoryFragment<T> {
 
 		private final @Nullable Class<T> interfaceClass;
 		private final T implementation;
-
-		/**
-		 * Creates a new {@link ImplementedRepositoryFragment} for the given interface class and implementation.
-		 *
-		 * @param interfaceClass
-		 * @param implementation
-		 * @deprecated since 3.4 - use {@link ImplementedRepositoryFragment(Class, Object)} instead.
-		 */
-		@Deprecated(since = "3.4", forRemoval = true)
-		public ImplementedRepositoryFragment(Optional<Class<T>> interfaceClass, T implementation) {
-			this(interfaceClass.orElse(null), implementation);
-		}
+		private final Method[] methods;
 
 		/**
 		 * Creates a new {@link ImplementedRepositoryFragment} for the given interface class and implementation.
@@ -191,16 +298,18 @@ public interface RepositoryFragment<T> {
 
 			Assert.notNull(implementation, "Implementation object must not be null");
 
-			if (interfaceClass != null) {
+			if (interfaceClass != null && !(implementation instanceof Class)) {
 
-				Assert.isTrue(ClassUtils.isAssignableValue(interfaceClass, implementation),
-					() -> "Fragment implementation %s does not implement %s".formatted(
-							ClassUtils.getQualifiedName(implementation.getClass()),
-							ClassUtils.getQualifiedName(interfaceClass)));
+				Assert
+						.isTrue(ClassUtils.isAssignableValue(interfaceClass, implementation),
+								() -> "Fragment implementation %s does not implement %s".formatted(
+										ClassUtils.getQualifiedName(implementation.getClass()),
+										ClassUtils.getQualifiedName(interfaceClass)));
 			}
 
 			this.interfaceClass = interfaceClass;
 			this.implementation = implementation;
+			this.methods = getSignatureContributor().getMethods();
 		}
 
 		@Override
@@ -214,6 +323,26 @@ public interface RepositoryFragment<T> {
 				return type;
 			}
 			return implementation.getClass();
+		}
+
+		@Override
+		public Stream<Method> methods() {
+			return Arrays.stream(methods);
+		}
+
+		@Override
+		public List<Method> findMethods(String name) {
+			return RepositoryFragment.findMethods(name, this.methods);
+		}
+
+		@Override
+		public boolean hasMethod(Method method) {
+
+			if (RepositoryFragment.hasMethod(method, this.methods)) {
+				return true;
+			}
+
+			return RepositoryFragment.super.hasMethod(method);
 		}
 
 		@Override

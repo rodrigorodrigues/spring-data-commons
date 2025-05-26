@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,15 @@
  */
 package org.springframework.data.repository.config;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.mockito.Mockito.mock;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.annotation.ComponentScan.Filter;
@@ -184,6 +184,34 @@ class AnnotationRepositoryConfigurationSourceUnitTests {
 		assertThat(getConfigSource(DefaultConfiguration.class).generateBeanName(bd)).isEqualTo("personRepository");
 	}
 
+	@Test // GH-3279
+	void considersDefaultFragmentsContributor() {
+
+		RootBeanDefinition bd = new RootBeanDefinition(DummyRepositoryFactory.class);
+		bd.getConstructorArgumentValues().addGenericArgumentValue(PersonRepository.class);
+
+		AnnotationMetadata metadata = new StandardAnnotationMetadata(ConfigurationWithFragmentsContributor.class, true);
+		AnnotationRepositoryConfigurationSource configurationSource = new AnnotationRepositoryConfigurationSource(metadata,
+				EnableRepositoriesWithContributor.class, resourceLoader, environment, registry, null);
+
+		assertThat(configurationSource.getRepositoryFragmentsContributorClassName())
+				.contains(SampleRepositoryFragmentsContributor.class.getName());
+	}
+
+	@Test // GH-3279
+	void omitsUnspecifiedFragmentsContributor() {
+
+		RootBeanDefinition bd = new RootBeanDefinition(DummyRepositoryFactory.class);
+		bd.getConstructorArgumentValues().addGenericArgumentValue(PersonRepository.class);
+
+		AnnotationMetadata metadata = new StandardAnnotationMetadata(ReactiveConfigurationWithBeanNameGenerator.class,
+				true);
+		AnnotationRepositoryConfigurationSource configurationSource = new AnnotationRepositoryConfigurationSource(metadata,
+				EnableReactiveRepositories.class, resourceLoader, environment, registry, null);
+
+		assertThat(configurationSource.getRepositoryFragmentsContributorClassName()).isEmpty();
+	}
+
 	@Test // GH-3082
 	void considerBeanNameGeneratorForReactiveRepos() {
 
@@ -219,6 +247,9 @@ class AnnotationRepositoryConfigurationSourceUnitTests {
 	@EnableRepositories(nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class)
 	static class ConfigurationWithBeanNameGenerator {}
 
+	@EnableRepositoriesWithContributor()
+	static class ConfigurationWithFragmentsContributor {}
+
 	@EnableReactiveRepositories(nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class)
 	static class ReactiveConfigurationWithBeanNameGenerator {}
 
@@ -234,4 +265,5 @@ class AnnotationRepositoryConfigurationSourceUnitTests {
 	static class ConfigWithSampleAnnotation {}
 
 	interface ReactivePersonRepository extends ReactiveCrudRepository<Person, String> {}
+
 }

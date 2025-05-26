@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2024 the original author or authors.
+ * Copyright 2018-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package org.springframework.data.repository.query;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,13 +26,14 @@ import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.Range;
 import org.springframework.data.domain.Range.Bound;
 import org.springframework.data.expression.ValueEvaluationContext;
 import org.springframework.data.expression.ValueEvaluationContextProvider;
 import org.springframework.data.expression.ValueExpression;
 import org.springframework.data.expression.ValueExpressionParser;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -186,8 +186,8 @@ public class ValueExpressionQueryRewriter {
 		 * @param replacementSource must not be {@literal null}.
 		 */
 		private EvaluatingValueExpressionQueryRewriter(ValueExpressionParser expressionParser,
-				QueryMethodValueEvaluationContextAccessor factory,
-				BiFunction<Integer, String, String> parameterNameSource, BiFunction<String, String, String> replacementSource) {
+				QueryMethodValueEvaluationContextAccessor factory, BiFunction<Integer, String, String> parameterNameSource,
+				BiFunction<String, String, String> replacementSource) {
 
 			super(expressionParser, parameterNameSource, replacementSource);
 
@@ -302,8 +302,38 @@ public class ValueExpressionQueryRewriter {
 			return quotations.isQuoted(index);
 		}
 
+		/**
+		 * @param name
+		 * @return
+		 * @since 4.0
+		 */
+		public boolean hasExpression(String name) {
+			return expressions.get(name) != null;
+		}
+
+		@Nullable
 		public ValueExpression getParameter(String name) {
 			return expressions.get(name);
+		}
+
+		/**
+		 * Returns the required {@link ValueExpression} for the given name or throws an {@link IllegalArgumentException} if
+		 * the parameter is not present.
+		 *
+		 * @param name
+		 * @return
+		 * @throws IllegalArgumentException if the parameter is not present.
+		 * @since 4.0
+		 */
+		public ValueExpression getRequiredParameter(String name) {
+
+			ValueExpression valueExpression = getParameter(name);
+
+			if (valueExpression == null) {
+				throw new IllegalArgumentException("No ValueExpression with name '%s' found in query".formatted(name));
+			}
+
+			return valueExpression;
 		}
 
 		/**
@@ -345,7 +375,7 @@ public class ValueExpressionQueryRewriter {
 	 */
 	static class QuotationMap {
 
-		private static final Collection<Character> QUOTING_CHARACTERS = Arrays.asList('"', '\'');
+		private static final Collection<Character> QUOTING_CHARACTERS = List.of('"', '\'');
 
 		private final List<Range<Integer>> quotedRanges = new ArrayList<>();
 
@@ -414,8 +444,7 @@ public class ValueExpressionQueryRewriter {
 		private final ValueEvaluationContextProvider evaluationContextProvider;
 		private final ParsedQuery detector;
 
-		public QueryExpressionEvaluator(ValueEvaluationContextProvider evaluationContextProvider,
-				ParsedQuery detector) {
+		public QueryExpressionEvaluator(ValueEvaluationContextProvider evaluationContextProvider, ParsedQuery detector) {
 			this.evaluationContextProvider = evaluationContextProvider;
 			this.detector = detector;
 		}
@@ -426,12 +455,12 @@ public class ValueExpressionQueryRewriter {
 		 * @param values Parameter values. Must not be {@literal null}.
 		 * @return a map from parameter name to evaluated value as of {@link ParsedQuery#getParameterMap()}.
 		 */
-		public Map<String, Object> evaluate(Object[] values) {
+		public Map<String, @Nullable Object> evaluate(Object[] values) {
 
 			Assert.notNull(values, "Values must not be null.");
 
 			Map<String, ValueExpression> parameterMap = detector.getParameterMap();
-			Map<String, Object> results = new LinkedHashMap<>(parameterMap.size());
+			Map<String, @Nullable Object> results = new LinkedHashMap<>(parameterMap.size());
 
 			parameterMap.forEach((parameter, expression) -> results.put(parameter, evaluate(expression, values)));
 
@@ -447,8 +476,7 @@ public class ValueExpressionQueryRewriter {
 			return detector.getQueryString();
 		}
 
-		@Nullable
-		private Object evaluate(ValueExpression expression, Object[] values) {
+		private @Nullable Object evaluate(ValueExpression expression, Object[] values) {
 
 			ValueEvaluationContext evaluationContext = evaluationContextProvider.getEvaluationContext(values,
 					expression.getExpressionDependencies());

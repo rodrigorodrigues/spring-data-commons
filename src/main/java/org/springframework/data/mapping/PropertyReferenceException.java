@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,18 @@
  */
 package org.springframework.data.mapping;
 
+import java.io.Serial;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.PropertyMatches;
 import org.springframework.data.util.Lazy;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -37,7 +39,7 @@ import org.springframework.util.StringUtils;
  */
 public class PropertyReferenceException extends RuntimeException {
 
-	private static final long serialVersionUID = -5254424051438976570L;
+	private static final @Serial long serialVersionUID = -5254424051438976570L;
 
 	static final String ERROR_TEMPLATE = "No property '%s' found for type '%s'";
 	static final String HINTS_TEMPLATE = "Did you mean %s";
@@ -120,8 +122,7 @@ public class PropertyReferenceException extends RuntimeException {
 	 *
 	 * @return
 	 */
-	@Nullable
-	public PropertyPath getBaseProperty() {
+	public @Nullable PropertyPath getBaseProperty() {
 		return alreadyResolvedPath.isEmpty() ? null : alreadyResolvedPath.get(alreadyResolvedPath.size() - 1);
 	}
 

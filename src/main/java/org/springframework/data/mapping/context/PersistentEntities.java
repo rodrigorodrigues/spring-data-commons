@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,12 +27,13 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.mapping.MappingException;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.util.Streamable;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -53,7 +54,6 @@ public class PersistentEntities implements Streamable<PersistentEntity<?, ? exte
 	 *
 	 * @param contexts
 	 */
-	@SuppressWarnings("unchecked")
 	public PersistentEntities(Iterable<? extends MappingContext<?, ?>> contexts) {
 
 		Assert.notNull(contexts, "MappingContexts must not be null");
@@ -190,8 +190,7 @@ public class PersistentEntities implements Streamable<PersistentEntity<?, ? exte
 	 * @return
 	 * @since 2.1
 	 */
-	@Nullable
-	public PersistentEntity<?, ?> getEntityUltimatelyReferredToBy(PersistentProperty<?> property) {
+	public @Nullable PersistentEntity<?, ?> getEntityUltimatelyReferredToBy(PersistentProperty<?> property) {
 
 		TypeInformation<?> propertyType = property.getTypeInformation().getActualType();
 
@@ -208,7 +207,7 @@ public class PersistentEntities implements Streamable<PersistentEntity<?, ? exte
 
 	/**
 	 * Returns the type the given {@link PersistentProperty} ultimately refers to. In case it's of a unique identifier
-	 * type of an entity known it'll return the entity type.
+	 * type of entity known it'll return the entity type.
 	 *
 	 * @param property must not be {@literal null}.
 	 * @return
@@ -232,8 +231,7 @@ public class PersistentEntities implements Streamable<PersistentEntity<?, ? exte
 	 * @throws IllegalStateException if the entity cannot be detected uniquely as multiple ones might share the same
 	 *           identifier.
 	 */
-	@Nullable
-	private PersistentEntity<?, ?> getEntityIdentifiedBy(TypeInformation<?> type) {
+	private @Nullable PersistentEntity<?, ?> getEntityIdentifiedBy(TypeInformation<?> type) {
 
 		Collection<PersistentEntity<?, ?>> entities = new ArrayList<>();
 		for (MappingContext<?, ? extends PersistentProperty<?>> context : contexts) {

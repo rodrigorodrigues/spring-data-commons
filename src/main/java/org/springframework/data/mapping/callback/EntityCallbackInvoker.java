@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2024 the original author or authors.
+ * Copyright 2019-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ interface EntityCallbackInvoker {
 	 * @param callback must not be {@literal null}.
 	 * @param entity must not be {@literal null}
 	 * @param callbackInvokerFunction must not be {@literal null}.
-	 * @param <T>
 	 * @return never {@literal null}.
 	 */
 	<T> Object invokeCallback(EntityCallback<T> callback, T entity,

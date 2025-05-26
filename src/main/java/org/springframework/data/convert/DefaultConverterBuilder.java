@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2024 the original author or authors.
+ * Copyright 2017-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.GenericConverter;
@@ -29,7 +31,6 @@ import org.springframework.data.convert.ConverterBuilder.ConverterAware;
 import org.springframework.data.convert.ConverterBuilder.ReadingConverterBuilder;
 import org.springframework.data.convert.ConverterBuilder.WritingConverterBuilder;
 import org.springframework.data.util.Optionals;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -111,10 +112,9 @@ record DefaultConverterBuilder<S, T> (ConvertiblePair convertiblePair,
 			this.function = function;
 		}
 
-		@Nullable
 		@Override
 		@SuppressWarnings("unchecked")
-		public Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
+		public @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
 			return function.apply((S) source);
 		}
 

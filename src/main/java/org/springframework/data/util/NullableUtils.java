@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2024 the original author or authors.
+ * Copyright 2017-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,6 @@ import java.lang.annotation.ElementType;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,13 +27,16 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.annotation.MergedAnnotations;
+import org.springframework.lang.Contract;
 import org.springframework.lang.NonNullApi;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.MultiValueMap;
 
 /**
@@ -48,7 +49,7 @@ import org.springframework.util.MultiValueMap;
  * package rule. Subpackages do not inherit nullability rules and must be annotated themself.
  *
  * <pre class="code">
- * &#64;org.springframework.lang.NonNullApi
+ * &#64;org.jspecify.annotations.NullMarked
  * package com.example;
  * </pre>
  *
@@ -88,8 +89,8 @@ public abstract class NullableUtils {
 	private static final Set<Class<?>> NON_NULLABLE_ANNOTATIONS = findClasses("reactor.util.lang.NonNullApi",
 			NonNullApi.class.getName());
 
-	private static final Set<String> WHEN_NULLABLE = new HashSet<>(Arrays.asList("UNKNOWN", "MAYBE", "NEVER"));
-	private static final Set<String> WHEN_NON_NULLABLE = new HashSet<>(Collections.singletonList("ALWAYS"));
+	private static final Set<String> WHEN_NULLABLE = Set.of("UNKNOWN", "MAYBE", "NEVER");
+	private static final Set<String> WHEN_NON_NULLABLE = Set.of("ALWAYS");
 
 	private NullableUtils() {}
 
@@ -100,10 +101,21 @@ public abstract class NullableUtils {
 	 *
 	 * @param method the method to inspect.
 	 * @param elementType the element type.
-	 * @return {@literal true} if {@link ElementType} allows {@literal null} values by default.
+	 * @return {@literal false} if {@link ElementType} allows {@literal null} values by default. {@literal true} if the
+	 *         methods return type is a {@link Class#isPrimitive() primitive} and {@literal false} if the method is
+	 *         {@literal void}.
 	 * @see #isNonNull(Annotation, ElementType)
 	 */
 	public static boolean isNonNull(Method method, ElementType elementType) {
+
+		Class<?> returnType = method.getReturnType();
+
+		if (ReflectionUtils.isVoid(returnType)) {
+			return false;
+		} else if (returnType.isPrimitive()) {
+			return true;
+		}
+
 		return isNonNull(method.getDeclaringClass(), elementType) || isNonNull((AnnotatedElement) method, elementType);
 	}
 
@@ -114,10 +126,16 @@ public abstract class NullableUtils {
 	 *
 	 * @param type the class to inspect.
 	 * @param elementType the element type.
-	 * @return {@literal true} if {@link ElementType} allows {@literal null} values by default.
+	 * @return {@literal false} if {@link ElementType} allows {@literal null} values. {@literal true} the given
+	 *         {@literal type} is a {@link Class#isPrimitive() primitive}.
 	 * @see #isNonNull(Annotation, ElementType)
 	 */
 	public static boolean isNonNull(Class<?> type, ElementType elementType) {
+
+		if (type.isPrimitive()) {
+			return true;
+		}
+
 		return isNonNull(type.getPackage(), elementType) || isNonNull((AnnotatedElement) type, elementType);
 	}
 
@@ -126,11 +144,17 @@ public abstract class NullableUtils {
 	 * This method determines default {@code javax.annotation.Nonnull nullability} rules from the annotated element
 	 *
 	 * @param element the scope of declaration, may be a {@link Package}, {@link Class}, or
-	 *          {@link java.lang.reflect.Method}.
+	 *          {@link java.lang.reflect.Method}. Can be {@literal null}.
 	 * @param elementType the element type.
-	 * @return {@literal true} if {@link ElementType} allows {@literal null} values by default.
+	 * @return {@literal false} if {@link ElementType} allows {@literal null} values by default or if the given
+	 *         {@link AnnotatedElement} is {@literal null}.
 	 */
-	public static boolean isNonNull(AnnotatedElement element, ElementType elementType) {
+	@Contract("null, _ -> false")
+	public static boolean isNonNull(@Nullable AnnotatedElement element, ElementType elementType) {
+
+		if (element == null) {
+			return false;
+		}
 
 		for (Annotation annotation : element.getAnnotations()) {
 
@@ -157,8 +181,7 @@ public abstract class NullableUtils {
 			return true;
 		}
 
-		if (!MergedAnnotations.from(annotation.annotationType()).isPresent(annotationClass)
-				|| !isNonNull(annotation)) {
+		if (!MergedAnnotations.from(annotation.annotationType()).isPresent(annotationClass) || !isNonNull(annotation)) {
 			return false;
 		}
 
@@ -227,26 +250,28 @@ public abstract class NullableUtils {
 
 		if (annotation.annotationType().getName().equals(metaAnnotationName)) {
 
-			Map<String, Object> attributes = AnnotationUtils.getAnnotationAttributes(annotation);
-
+			Map<String, @Nullable Object> attributes = AnnotationUtils.getAnnotationAttributes(annotation);
 			return !attributes.isEmpty() && filter.test((T) attributes.get(attribute));
 		}
 
-		MultiValueMap<String, Object> attributes = AnnotatedElementUtils
+		MultiValueMap<String, @Nullable Object> attributes = AnnotatedElementUtils
 				.getAllAnnotationAttributes(annotation.annotationType(), metaAnnotationName);
 
-		if (attributes == null || attributes.isEmpty()) {
+		if (CollectionUtils.isEmpty(attributes)) {
 			return false;
 		}
 
-		List<Object> elementTypes = attributes.get(attribute);
+		List<@Nullable Object> elementTypes = attributes.get(attribute);
 
-		for (Object value : elementTypes) {
+		if (elementTypes != null) {
+			for (Object value : elementTypes) {
 
-			if (filter.test((T) value)) {
-				return true;
+				if (filter.test((T) value)) {
+					return true;
+				}
 			}
 		}
+
 		return false;
 	}
 

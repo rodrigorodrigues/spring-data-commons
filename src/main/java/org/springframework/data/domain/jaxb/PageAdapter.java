@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,12 @@ import jakarta.xml.bind.annotation.adapters.XmlAdapter;
 import java.util.Collections;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.jaxb.SpringDataJaxb.PageDto;
 import org.springframework.hateoas.Link;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 
 /**
  * {@link XmlAdapter} to convert {@link Page} instances into {@link PageDto} instances and vice versa.
@@ -32,9 +34,9 @@ import org.springframework.lang.Nullable;
  */
 public class PageAdapter extends XmlAdapter<PageDto, Page<Object>> {
 
-	@Nullable
+	@Contract("null -> null; !null -> !null")
 	@Override
-	public PageDto marshal(@Nullable Page<Object> source) {
+	public @Nullable PageDto marshal(@Nullable Page<Object> source) {
 
 		if (source == null) {
 			return null;
@@ -47,9 +49,9 @@ public class PageAdapter extends XmlAdapter<PageDto, Page<Object>> {
 		return dto;
 	}
 
-	@Nullable
+	@Contract("_ -> null")
 	@Override
-	public Page<Object> unmarshal(@Nullable PageDto v) {
+	public @Nullable Page<Object> unmarshal(@Nullable PageDto v) {
 		return null;
 	}
 

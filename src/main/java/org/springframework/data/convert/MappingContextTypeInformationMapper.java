@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,13 @@ package org.springframework.data.convert;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.mapping.Alias;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -65,7 +66,7 @@ public class MappingContextTypeInformationMapper implements TypeInformationMappe
 
 			PersistentEntity<?, ? extends PersistentProperty<?>> entity = mappingContext.getPersistentEntity(key);
 
-			if (entity == null || entity.getTypeAlias() == null) {
+			if (entity == null || entity.getTypeAlias().isEmpty()) {
 				return Alias.NONE;
 			}
 
@@ -109,9 +110,8 @@ public class MappingContextTypeInformationMapper implements TypeInformationMappe
 		return alias;
 	}
 
-	@Nullable
 	@Override
-	public TypeInformation<?> resolveTypeFrom(Alias alias) {
+	public @Nullable TypeInformation<?> resolveTypeFrom(Alias alias) {
 
 		for (Map.Entry<TypeInformation<?>, Alias> entry : typeMap.entrySet()) {
 			if (entry.getValue().hasSamePresentValueAs(alias)) {

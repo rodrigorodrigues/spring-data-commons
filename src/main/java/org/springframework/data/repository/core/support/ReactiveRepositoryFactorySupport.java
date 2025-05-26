@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024 the original author or authors.
+ * Copyright 2016-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,15 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.query.QueryLookupStrategy;
-import org.springframework.data.repository.query.QueryMethodEvaluationContextProvider;
-import org.springframework.data.repository.query.ReactiveExtensionAwareQueryMethodEvaluationContextProvider;
-import org.springframework.data.repository.query.ReactiveQueryMethodEvaluationContextProvider;
 import org.springframework.data.repository.query.ValueExpressionDelegate;
 import org.springframework.data.repository.util.ReactiveWrapperConverters;
 import org.springframework.data.util.ReactiveWrappers;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -62,28 +59,8 @@ public abstract class ReactiveRepositoryFactorySupport extends RepositoryFactory
 	}
 
 	/**
-	 * Sets the {@link QueryMethodEvaluationContextProvider} to be used to evaluate SpEL expressions in manually defined
-	 * queries.
-	 *
-	 * @param evaluationContextProvider can be {@literal null}, defaults to
-	 *          {@link ReactiveQueryMethodEvaluationContextProvider#DEFAULT}.
-	 */
-	@Override
-	public void setEvaluationContextProvider(QueryMethodEvaluationContextProvider evaluationContextProvider) {
-		super.setEvaluationContextProvider(
-				evaluationContextProvider == null ? ReactiveQueryMethodEvaluationContextProvider.DEFAULT
-						: evaluationContextProvider);
-	}
-
-	/**
 	 * Returns the {@link QueryLookupStrategy} for the given {@link QueryLookupStrategy.Key} and
-	 * {@link ValueExpressionDelegate}. Favor implementing this method over
-	 * {@link #getQueryLookupStrategy(QueryLookupStrategy.Key, QueryMethodEvaluationContextProvider)} for extended
-	 * {@link org.springframework.data.expression.ValueExpression} support.
-	 * <p>
-	 * This method delegates to
-	 * {@link #getQueryLookupStrategy(QueryLookupStrategy.Key, QueryMethodEvaluationContextProvider)} unless overridden.
-	 * </p>
+	 * {@link ValueExpressionDelegate}.
 	 *
 	 * @param key can be {@literal null}.
 	 * @param valueExpressionDelegate will never be {@literal null}.
@@ -91,10 +68,9 @@ public abstract class ReactiveRepositoryFactorySupport extends RepositoryFactory
 	 * @since 3.4
 	 */
 	@Override
-	protected Optional<QueryLookupStrategy> getQueryLookupStrategy(@Nullable QueryLookupStrategy.Key key,
+	protected Optional<QueryLookupStrategy> getQueryLookupStrategy(QueryLookupStrategy.@Nullable Key key,
 			ValueExpressionDelegate valueExpressionDelegate) {
-		return getQueryLookupStrategy(key,
-				new ReactiveExtensionAwareQueryMethodEvaluationContextProvider(getEvaluationContextProvider()));
+		return Optional.empty();
 	}
 
 	/**

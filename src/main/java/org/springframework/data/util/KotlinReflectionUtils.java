@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2024 the original author or authors.
+ * Copyright 2019-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,10 +30,11 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.KotlinDetector;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.lang.Nullable;
 
 /**
  * Reflection utility methods specific to Kotlin reflection. Requires Kotlin classes to be present to avoid linkage
@@ -90,8 +91,7 @@ public final class KotlinReflectionUtils {
 	 * @param method the method to look up.
 	 * @return the {@link KFunction} or {@code null} if the method cannot be looked up.
 	 */
-	@Nullable
-	public static KFunction<?> findKotlinFunction(Method method) {
+	public static @Nullable KFunction<?> findKotlinFunction(Method method) {
 
 		KFunction<?> kotlinFunction = ReflectJvmMapping.getKotlinFunction(method);
 
@@ -260,7 +260,7 @@ public final class KotlinReflectionUtils {
 
 		CLASS(1), FILE(2), SYNTHETIC_CLASS(3), MULTI_FILE_CLASS_FACADE(4), MULTI_FILE_CLASS_PART(5);
 
-		int id;
+		final int id;
 
 		KotlinClassHeaderKind(int val) {
 			this.id = val;

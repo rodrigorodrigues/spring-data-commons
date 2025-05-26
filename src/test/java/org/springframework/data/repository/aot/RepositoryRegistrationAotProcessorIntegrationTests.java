@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import static org.springframework.data.repository.aot.RepositoryRegistrationAotC
 import java.io.Serializable;
 
 import org.junit.jupiter.api.Test;
+
 import org.springframework.aop.SpringProxy;
 import org.springframework.aop.framework.Advised;
 import org.springframework.aot.hint.RuntimeHints;
@@ -31,9 +32,18 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.ComponentScan.Filter;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.core.DecoratingProxy;
-import org.springframework.data.aot.sample.*;
+import org.springframework.data.aot.sample.ConfigWithCustomImplementation;
+import org.springframework.data.aot.sample.ConfigWithCustomRepositoryBaseClass;
+import org.springframework.data.aot.sample.ConfigWithFragments;
+import org.springframework.data.aot.sample.ConfigWithQueryMethods;
 import org.springframework.data.aot.sample.ConfigWithQueryMethods.ProjectionInterface;
+import org.springframework.data.aot.sample.ConfigWithQuerydslPredicateExecutor;
 import org.springframework.data.aot.sample.ConfigWithQuerydslPredicateExecutor.Person;
+import org.springframework.data.aot.sample.ConfigWithSimpleCrudRepository;
+import org.springframework.data.aot.sample.ConfigWithTransactionManagerPresent;
+import org.springframework.data.aot.sample.ConfigWithTransactionManagerPresentAndAtComponentAnnotatedRepository;
+import org.springframework.data.aot.sample.QConfigWithQuerydslPredicateExecutor_Person;
+import org.springframework.data.aot.sample.ReactiveConfig;
 import org.springframework.data.domain.AbstractAggregateRoot;
 import org.springframework.data.domain.AfterDomainEventPublication;
 import org.springframework.data.domain.DomainEvents;
@@ -45,6 +55,7 @@ import org.springframework.data.repository.aot.RepositoryRegistrationAotProcesso
 import org.springframework.data.repository.config.EnableRepositories;
 import org.springframework.data.repository.config.RepositoryRegistrationAotContribution;
 import org.springframework.data.repository.config.RepositoryRegistrationAotProcessor;
+import org.springframework.data.repository.config.SampleRepositoryFragmentsContributor;
 import org.springframework.data.repository.reactive.ReactiveSortingRepository;
 import org.springframework.transaction.interceptor.TransactionalProxy;
 
@@ -185,10 +196,8 @@ public class RepositoryRegistrationAotProcessorIntegrationTests {
 							.contributesReflectionFor(PagingAndSortingRepository.class) // base repository
 							.contributesReflectionFor(ConfigWithCustomImplementation.Person.class) // repository domain type
 
-							// fragments
-							.contributesReflectionFor(ConfigWithCustomImplementation.CustomImplInterface.class,
-									ConfigWithCustomImplementation.RepositoryWithCustomImplementationImpl.class);
-
+							// fragments (custom implementation)
+							.contributesReflectionFor(ConfigWithCustomImplementation.RepositoryWithCustomImplementationImpl.class);
 				});
 	}
 
@@ -229,10 +238,11 @@ public class RepositoryRegistrationAotProcessorIntegrationTests {
 
 		assertThatContribution(repositoryBeanContribution) //
 				.targetRepositoryTypeIs(ConfigWithCustomRepositoryBaseClass.CustomerRepositoryWithCustomBaseRepo.class) //
-				.hasNoFragments() //
+				.hasFragments() //
 				.codeContributionSatisfies(contribution -> { //
 					// interface
 					contribution
+							.contributesReflectionFor(SampleRepositoryFragmentsContributor.class) // repository structural fragment
 							.contributesReflectionFor(ConfigWithCustomRepositoryBaseClass.CustomerRepositoryWithCustomBaseRepo.class) // repository
 							.contributesReflectionFor(ConfigWithCustomRepositoryBaseClass.RepoBaseClass.class) // base repo class
 							.contributesReflectionFor(ConfigWithCustomRepositoryBaseClass.Person.class); // repository domain type

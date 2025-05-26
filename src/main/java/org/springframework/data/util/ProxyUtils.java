@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2024 the original author or authors.
+ * Copyright 2018-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ import org.springframework.util.ConcurrentReferenceHashMap;
  */
 public abstract class ProxyUtils {
 
-	private static Map<Class<?>, Class<?>> USER_TYPES = new ConcurrentReferenceHashMap<>();
+	private static final Map<Class<?>, Class<?>> USER_TYPES = new ConcurrentReferenceHashMap<>();
 
 	private static final List<ProxyDetector> DETECTORS = SpringFactoriesLoader.loadFactories(ProxyDetector.class,
 			ProxyUtils.class.getClassLoader());
@@ -83,7 +83,7 @@ public abstract class ProxyUtils {
 	 *
 	 * @author Oliver Gierke
 	 */
-	public static interface ProxyDetector {
+	public interface ProxyDetector {
 
 		/**
 		 * Returns the user class for the given type.

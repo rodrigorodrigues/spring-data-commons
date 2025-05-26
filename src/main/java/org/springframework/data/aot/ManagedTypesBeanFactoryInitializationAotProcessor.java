@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.function.Supplier;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotContribution;
 import org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor;
@@ -29,7 +30,7 @@ import org.springframework.beans.factory.config.ConstructorArgumentValues.ValueH
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.data.domain.ManagedTypes;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
@@ -44,11 +45,12 @@ import org.springframework.util.ObjectUtils;
  */
 public class ManagedTypesBeanFactoryInitializationAotProcessor implements BeanFactoryInitializationAotProcessor {
 
-	private static final Log logger = LogFactory.getLog(BeanFactoryInitializationAotProcessor.class);
+	private static final Log logger = LogFactory.getLog(ManagedTypesBeanFactoryInitializationAotProcessor.class);
 
-	@Nullable
 	@Override
-	public BeanFactoryInitializationAotContribution processAheadOfTime(ConfigurableListableBeanFactory beanFactory) {
+	@Contract("_ -> null")
+	public @Nullable BeanFactoryInitializationAotContribution processAheadOfTime(
+			ConfigurableListableBeanFactory beanFactory) {
 
 		processManagedTypes(beanFactory);
 		return null;
@@ -71,21 +73,24 @@ public class ManagedTypesBeanFactoryInitializationAotProcessor implements BeanFa
 
 		if (hasConstructorArguments(beanDefinition)) {
 
-			ValueHolder argumentValue = beanDefinition.getConstructorArgumentValues().getArgumentValue(0, null, null, null);
+			ValueHolder holder = beanDefinition.getConstructorArgumentValues().getArgumentValue(0, null, null, null);
 
-			if (argumentValue.getValue()instanceof Supplier supplier) {
+			if (holder != null && holder.getValue() instanceof Supplier<?> supplier) {
 
 				if (logger.isDebugEnabled()) {
 					logger.info(String.format("Replacing ManagedType bean definition %s.", beanName));
 				}
 
 				Object value = potentiallyWrapToIterable(supplier.get());
+				String beanClassName = beanDefinition.getBeanClassName();
 
-				BeanDefinition beanDefinitionReplacement = newManagedTypeBeanDefinition(beanDefinition.getBeanClassName(),
-						value);
+				if (beanClassName != null) {
 
-				registry.removeBeanDefinition(beanName);
-				registry.registerBeanDefinition(beanName, beanDefinitionReplacement);
+					BeanDefinition beanDefinitionReplacement = newManagedTypeBeanDefinition(beanClassName, value);
+
+					registry.removeBeanDefinition(beanName);
+					registry.registerBeanDefinition(beanName, beanDefinitionReplacement);
+				}
 			}
 		}
 	}

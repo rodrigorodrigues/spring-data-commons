@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
  */
 package org.springframework.data.repository.init;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.springframework.context.ApplicationContext;
@@ -23,8 +26,6 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.io.Resource;
 import org.springframework.data.repository.support.Repositories;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -54,6 +55,7 @@ public abstract class AbstractRepositoryPopulatorFactoryBean
 		this.resources = resources.clone();
 	}
 
+	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) {
 		this.context = applicationContext;
 	}
@@ -79,6 +81,7 @@ public abstract class AbstractRepositoryPopulatorFactoryBean
 		return initializer;
 	}
 
+	@Override
 	public void onApplicationEvent(ContextRefreshedEvent event) {
 
 		RepositoryPopulator populator = this.populator;

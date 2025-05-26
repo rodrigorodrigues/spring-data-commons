@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,18 @@
  */
 package org.springframework.data.mapping.context;
 
+import java.io.Serial;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.PropertyMatches;
 import org.springframework.data.mapping.MappingException;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.PersistentPropertyPath;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -36,7 +38,7 @@ import org.springframework.util.StringUtils;
  */
 public class InvalidPersistentPropertyPath extends MappingException {
 
-	private static final long serialVersionUID = 2805815643641094488L;
+	private static final @Serial long serialVersionUID = 2805815643641094488L;
 	private static final String DEFAULT_MESSAGE = "No property '%s' found on %s; Did you mean: %s";
 
 	private final String source;
@@ -109,9 +111,7 @@ public class InvalidPersistentPropertyPath extends MappingException {
 			return "";
 		}
 
-		String dotPath = path.toDotPath();
-
-		return dotPath == null ? "" : dotPath;
+		return path.toDotPath();
 	}
 
 	private static String createMessage(TypeInformation<?> type, String unresolvableSegment) {

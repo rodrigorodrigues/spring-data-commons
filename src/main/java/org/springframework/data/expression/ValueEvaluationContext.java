@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 the original author or authors.
+ * Copyright 2024-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,10 @@ package org.springframework.data.expression;
 
 import org.springframework.core.env.Environment;
 import org.springframework.expression.EvaluationContext;
-import org.springframework.lang.Nullable;
 
 /**
- * Expressions are executed in an evaluation context. It is in this context that references are resolved when
- * encountered during expression evaluation.
+ * Expressions are executed using an evaluation context. This context is used to resolve references during (SpEL,
+ * property placeholder) expression evaluation.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -32,28 +31,26 @@ public interface ValueEvaluationContext {
 	/**
 	 * Returns a new {@link ValueEvaluationContext}.
 	 *
-	 * @param environment
-	 * @param evaluationContext
+	 * @param environment must not be {@literal null}.
+	 * @param evaluationContext must not be {@literal null}.
 	 * @return a new {@link ValueEvaluationContext} for the given environment and evaluation context.
 	 */
-	static ValueEvaluationContext of(@Nullable Environment environment, EvaluationContext evaluationContext) {
+	static ValueEvaluationContext of(Environment environment, EvaluationContext evaluationContext) {
 		return new DefaultValueEvaluationContext(environment, evaluationContext);
 	}
 
 	/**
-	 * Returns the {@link Environment} if provided.
+	 * Returns the {@link Environment}.
 	 *
-	 * @return the {@link Environment} or {@literal null}.
+	 * @return the {@link Environment}.
 	 */
-	@Nullable
 	Environment getEnvironment();
 
 	/**
-	 * Returns the {@link EvaluationContext} if provided.
+	 * Returns the {@link EvaluationContext}.
 	 *
-	 * @return the {@link EvaluationContext} or {@literal null} if not set.
+	 * @return the {@link EvaluationContext}.
 	 */
-	@Nullable
 	EvaluationContext getEvaluationContext();
 
 	/**
@@ -62,7 +59,10 @@ public interface ValueEvaluationContext {
 	 *
 	 * @return the {@link EvaluationContext}.
 	 * @since 3.4
+	 * @deprecated since 4.0, EvaluationContext is always provided.
 	 */
+	@Deprecated
+	@SuppressWarnings("ConstantValue")
 	default EvaluationContext getRequiredEvaluationContext() {
 
 		EvaluationContext evaluationContext = getEvaluationContext();

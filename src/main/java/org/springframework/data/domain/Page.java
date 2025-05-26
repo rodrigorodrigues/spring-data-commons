@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,8 +29,6 @@ public interface Page<T> extends Slice<T> {
 
 	/**
 	 * Creates a new empty {@link Page}.
-	 *
-	 * @return
 	 * @since 2.0
 	 */
 	static <T> Page<T> empty() {
@@ -41,7 +39,7 @@ public interface Page<T> extends Slice<T> {
 	 * Creates a new empty {@link Page} for the given {@link Pageable}.
 	 *
 	 * @param pageable must not be {@literal null}.
-	 * @return
+	 * @return a new, empty {@link Page} wrapping the given {@link Pageable}.
 	 * @since 2.0
 	 */
 	static <T> Page<T> empty(Pageable pageable) {
@@ -71,4 +69,5 @@ public interface Page<T> extends Slice<T> {
 	 */
 	@Override
 	<U> Page<U> map(Function<? super T, ? extends U> converter);
+
 }

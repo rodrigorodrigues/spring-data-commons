@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package org.springframework.data.repository.config;
 
 import java.lang.annotation.Annotation;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanNameGenerator;
@@ -27,7 +29,6 @@ import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
 /**
@@ -38,8 +39,8 @@ import org.springframework.util.Assert;
 public abstract class RepositoryBeanDefinitionRegistrarSupport
 		implements ImportBeanDefinitionRegistrar, ResourceLoaderAware, EnvironmentAware {
 
-	private @SuppressWarnings("null") @NonNull ResourceLoader resourceLoader;
-	private @SuppressWarnings("null") @NonNull Environment environment;
+	private @Nullable ResourceLoader resourceLoader;
+	private @Nullable Environment environment;
 
 	@Override
 	public void setResourceLoader(ResourceLoader resourceLoader) {
@@ -76,6 +77,7 @@ public abstract class RepositoryBeanDefinitionRegistrarSupport
 		Assert.notNull(metadata, "AnnotationMetadata must not be null");
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 		Assert.notNull(resourceLoader, "ResourceLoader must not be null");
+		Assert.state(environment != null, "Environment must not be null");
 
 		// Guard against calls for sub-classes
 		if (metadata.getAnnotationAttributes(getAnnotation().getName()) == null) {

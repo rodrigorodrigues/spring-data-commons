@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package org.springframework.data.convert;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.mapping.InstanceCreatorMetadata;
 import org.springframework.data.mapping.Parameter;
@@ -27,8 +29,7 @@ import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.mapping.model.EntityInstantiator;
 import org.springframework.data.mapping.model.EntityInstantiators;
 import org.springframework.data.mapping.model.ParameterValueProvider;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 
 /**
@@ -64,8 +65,8 @@ public class DtoInstantiatingConverter implements Converter<Object, Object> {
 		this.instantiator = instantiators.getInstantiatorFor(context.getRequiredPersistentEntity(dtoType));
 	}
 
-	@NonNull
 	@Override
+	@Contract("_ -> !null")
 	public Object convert(Object source) {
 
 		if (targetType.isInterface()) {
@@ -81,8 +82,8 @@ public class DtoInstantiatingConverter implements Converter<Object, Object> {
 		Object dto = instantiator.createInstance(targetEntity, new ParameterValueProvider() {
 
 			@Override
-			@Nullable
-			public Object getParameterValue(Parameter parameter) {
+			@SuppressWarnings({ "rawtypes" })
+			public @Nullable Object getParameterValue(Parameter parameter) {
 
 				String name = parameter.getName();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 the original author or authors.
+ * Copyright 2020-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import org.springframework.expression.EvaluationContext;
 /**
  * SPI to resolve a {@link EvaluationContextExtension} to make it accessible via the root of an
  * {@link EvaluationContext} provided by a
- * {@link org.springframework.data.repository.query.ExtensionAwareQueryMethodEvaluationContextProvider}.
+ * {@link org.springframework.data.spel.ReactiveExtensionAwareEvaluationContextProvider}.
  * <p>
  * Extensions can be ordered by following Spring's {@link org.springframework.core.Ordered} conventions.
  *

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,14 +24,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.mapping.Association;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
+import org.springframework.data.util.ClassUtils;
 import org.springframework.data.util.KotlinReflectionUtils;
 import org.springframework.data.util.Lazy;
 import org.springframework.data.util.ReflectionUtils;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -45,12 +47,12 @@ import org.springframework.util.Assert;
 public abstract class AbstractPersistentProperty<P extends PersistentProperty<P>> implements PersistentProperty<P> {
 
 	private static final Field CAUSE_FIELD;
-	private static final Class<?> ASSOCIATION_TYPE;
+	private static final @Nullable Class<?> ASSOCIATION_TYPE;
 
 	static {
 
 		CAUSE_FIELD = ReflectionUtils.getRequiredField(Throwable.class, "cause");
-		ASSOCIATION_TYPE = ReflectionUtils.loadIfPresent("org.jmolecules.ddd.types.Association",
+		ASSOCIATION_TYPE = ClassUtils.loadIfPresent("org.jmolecules.ddd.types.Association",
 				AbstractPersistentProperty.class.getClassLoader());
 	}
 
@@ -67,10 +69,10 @@ public abstract class AbstractPersistentProperty<P extends PersistentProperty<P>
 	private final Lazy<Boolean> isAssociation;
 	private final Lazy<TypeInformation<?>> associationTargetType;
 
-	private final Method getter;
-	private final Method setter;
-	private final Field field;
-	private final Method wither;
+	private final @Nullable Method getter;
+	private final @Nullable Method setter;
+	private final @Nullable Field field;
+	private final @Nullable Method wither;
 	private final Lazy<Boolean> readable;
 	private final boolean immutable;
 
@@ -160,33 +162,28 @@ public abstract class AbstractPersistentProperty<P extends PersistentProperty<P>
 		return entityTypeInformation.get();
 	}
 
-	@Nullable
 	@Override
-	public Method getGetter() {
+	public @Nullable Method getGetter() {
 		return this.getter;
 	}
 
-	@Nullable
 	@Override
-	public Method getSetter() {
+	public @Nullable Method getSetter() {
 		return this.setter;
 	}
 
-	@Nullable
 	@Override
-	public Method getWither() {
+	public @Nullable Method getWither() {
 		return this.wither;
 	}
 
-	@Nullable
 	@Override
-	public Field getField() {
+	public @Nullable Field getField() {
 		return this.field;
 	}
 
 	@Override
-	@Nullable
-	public String getSpelExpression() {
+	public @Nullable String getSpelExpression() {
 		return null;
 	}
 
@@ -215,24 +212,21 @@ public abstract class AbstractPersistentProperty<P extends PersistentProperty<P>
 		return isAssociation.get();
 	}
 
-	@Nullable
 	@Override
-	public Association<P> getAssociation() {
+	public @Nullable Association<P> getAssociation() {
 		return association.orElse(null);
 	}
 
-	@Nullable
 	@Override
-	public Class<?> getAssociationTargetType() {
+	public @Nullable Class<?> getAssociationTargetType() {
 
 		TypeInformation<?> result = getAssociationTargetTypeInformation();
 
 		return result != null ? result.getType() : null;
 	}
 
-	@Nullable
 	@Override
-	public TypeInformation<?> getAssociationTargetTypeInformation() {
+	public @Nullable TypeInformation<?> getAssociationTargetTypeInformation() {
 		return associationTargetType.getNullable();
 	}
 
@@ -256,15 +250,13 @@ public abstract class AbstractPersistentProperty<P extends PersistentProperty<P>
 		return !isTransient() && !entityTypeInformation.get().isEmpty();
 	}
 
-	@Nullable
 	@Override
-	public Class<?> getComponentType() {
+	public @Nullable Class<?> getComponentType() {
 		return isMap() || isCollectionLike() ? information.getRequiredComponentType().getType() : null;
 	}
 
-	@Nullable
 	@Override
-	public Class<?> getMapValueType() {
+	public @Nullable Class<?> getMapValueType() {
 
 		if (isMap()) {
 

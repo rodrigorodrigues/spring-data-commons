@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,17 +36,19 @@ import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.annotation.ModelAttributeMethodProcessor;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.multipart.support.MultipartResolutionDelegate;
 
 /**
  * {@link HandlerMethodArgumentResolver} to create Proxy instances for interface based controller method parameters.
  *
  * @author Oliver Gierke
+ * @author Chris Bono
  * @since 1.10
  */
 public class ProxyingHandlerMethodArgumentResolver extends ModelAttributeMethodProcessor
 		implements BeanFactoryAware, BeanClassLoaderAware {
 
-	private static final List<String> IGNORED_PACKAGES = Arrays.asList("java", "org.springframework");
+	private static final List<String> IGNORED_PACKAGES = List.of("java", "org.springframework");
 
 	private final SpelAwareProxyProjectionFactory proxyFactory;
 	private final ObjectFactory<ConversionService> conversionService;
@@ -88,9 +90,9 @@ public class ProxyingHandlerMethodArgumentResolver extends ModelAttributeMethodP
 			return false;
 		}
 
-		// Annotated parameter
-		if (parameter.getParameterAnnotation(ProjectedPayload.class) != null
-				|| parameter.getParameterAnnotation(ModelAttribute.class) != null) {
+		// Annotated parameter (excluding multipart)
+		if ((parameter.hasParameterAnnotation(ProjectedPayload.class) || parameter.hasParameterAnnotation(
+				ModelAttribute.class)) && !MultipartResolutionDelegate.isMultipartArgument(parameter)) {
 			return true;
 		}
 

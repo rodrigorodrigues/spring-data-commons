@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package org.springframework.data.mapping.model;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.context.expression.BeanFactoryResolver;
 import org.springframework.data.spel.EvaluationContextProvider;
@@ -23,7 +25,6 @@ import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.PropertyAccessor;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -92,7 +93,7 @@ public class SpELContext implements EvaluationContextProvider {
 	}
 
 	@Override
-	public EvaluationContext getEvaluationContext(Object source) {
+	public EvaluationContext getEvaluationContext(@Nullable Object source) {
 
 		StandardEvaluationContext evaluationContext = new StandardEvaluationContext(source);
 		evaluationContext.addPropertyAccessor(accessor);

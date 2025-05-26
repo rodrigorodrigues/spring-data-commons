@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2024 the original author or authors.
+ * Copyright 2017-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import org.springframework.util.ReflectionUtils;
  * Unit tests for {@link NullableUtils}.
  *
  * @author Mark Paluch
+ * @author Christoph Strobl
  */
 class NullableUtilsUnitTests {
 
@@ -114,5 +115,30 @@ class NullableUtilsUnitTests {
 		var method = ReflectionUtils.findMethod(NullableAnnotatedType.class, "jsr305NullableReturnWhen");
 
 		assertThat(NullableUtils.isExplicitNullable(new MethodParameter(method, -1))).isTrue();
+	}
+
+	@Test // GH-3242
+	void shouldConsiderPrimitivesNonNullable() {
+
+		var method = ReflectionUtils.findMethod(NullableAnnotatedType.class, "primitiveReturn");
+
+		assertThat(NullableUtils.isNonNull(method, ElementType.METHOD)).isTrue();
+		assertThat(NullableUtils.isNonNull(boolean.class, ElementType.PARAMETER)).isTrue();
+	}
+
+	@Test // GH-3242
+	void shouldConsiderVoidNullable() {
+
+		var method = ReflectionUtils.findMethod(NullableAnnotatedType.class, "noReturnActually");
+
+		assertThat(NullableUtils.isNonNull(method, ElementType.METHOD)).isFalse();
+	}
+
+	@Test // GH-3242
+	void shouldConsiderTypesNotAnnotatedWhereWeCannotDetermineThePackageAsNullable() throws ClassNotFoundException {
+
+		Class<?> typeInDefaultPackage = getClass().getClassLoader().loadClass("TypeInDefaultPackage");
+
+		assertThat(NullableUtils.isNonNull(typeInDefaultPackage, ElementType.PARAMETER)).isFalse();
 	}
 }

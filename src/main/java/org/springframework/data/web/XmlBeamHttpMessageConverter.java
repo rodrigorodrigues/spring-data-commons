@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,13 @@
 package org.springframework.data.web;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -30,8 +33,8 @@ import org.springframework.http.converter.AbstractHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
 import org.xml.sax.SAXParseException;
 import org.xmlbeam.XBProjector;
 import org.xmlbeam.config.DefaultXMLFactoriesConfig;
@@ -57,7 +60,7 @@ public class XmlBeamHttpMessageConverter extends AbstractHttpMessageConverter<Ob
 
 		this(new XBProjector(new DefaultXMLFactoriesConfig() {
 
-			private static final long serialVersionUID = -1324345769124477493L;
+			private static final @Serial long serialVersionUID = -1324345769124477493L;
 
 			@Override
 			public DocumentBuilderFactory createDocumentBuilderFactory() {

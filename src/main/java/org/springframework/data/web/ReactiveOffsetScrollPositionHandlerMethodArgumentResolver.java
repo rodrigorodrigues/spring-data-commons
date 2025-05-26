@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 the original author or authors.
+ * Copyright 2023-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 package org.springframework.data.web;
 
 import java.util.List;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.data.domain.OffsetScrollPosition;
@@ -40,7 +42,7 @@ public class ReactiveOffsetScrollPositionHandlerMethodArgumentResolver
 	}
 
 	@Override
-	public Object resolveArgumentValue(MethodParameter parameter, BindingContext bindingContext,
+	public @Nullable Object resolveArgumentValue(MethodParameter parameter, BindingContext bindingContext,
 			ServerWebExchange exchange) {
 
 		List<String> offsetParameter = exchange.getRequest().getQueryParams().get(getOffsetParameter(parameter));

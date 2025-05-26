@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.data.repository.config;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -136,7 +135,7 @@ public class CustomRepositoryImplementationDetector {
 		provider.setMetadataReaderFactory(config.getMetadataReaderFactory());
 		provider.addIncludeFilter((reader, factory) -> true);
 
-		config.getExcludeFilters().forEach(it -> provider.addExcludeFilter(it));
+		config.getExcludeFilters().forEach(provider::addExcludeFilter);
 
 		return config.getBasePackages().stream()//
 				.flatMap(it -> provider.findCandidateComponents(it).stream())//

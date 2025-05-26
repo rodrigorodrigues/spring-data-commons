@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.function.Function;
 import org.springframework.data.convert.PropertyValueConverter.FunctionPropertyValueConverter;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.util.MethodInvocationRecorder;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 
 /**
@@ -87,6 +88,7 @@ public class PropertyValueConverterRegistrar<P extends PersistentProperty<P>> {
 	 * @param converter the {@link PropertyValueConverter converter} to apply.
 	 * @return this.
 	 */
+	@Contract("_, _, _ -> this")
 	public PropertyValueConverterRegistrar<P> registerConverter(Class<?> type, String path,
 			PropertyValueConverter<?, ?, ? extends ValueConversionContext<?>> converter) {
 
@@ -192,7 +194,7 @@ public class PropertyValueConverterRegistrar<P extends PersistentProperty<P>> {
 		 * Describes how to read a database value into a domain object's property value.
 		 *
 		 * @param reader must not be {@literal null}.
-		 * @return the confiured {@link PropertyValueConverterRegistrar}.
+		 * @return the configured {@link PropertyValueConverterRegistrar}.
 		 */
 		@SuppressWarnings({ "rawtypes", "unchecked" })
 		public PropertyValueConverterRegistrar<P> reading(BiFunction<R, ValueConversionContext<P>, S> reader) {

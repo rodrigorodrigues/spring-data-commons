@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -53,7 +54,6 @@ import org.springframework.data.repository.core.support.AbstractRepositoryMetada
 import org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
 import org.springframework.data.util.ClassUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StopWatch;
 
@@ -74,6 +74,9 @@ public class RepositoryConfigurationDelegate {
 	private static final String REPOSITORY_REGISTRATION = "Spring Data %s - Registering repository: %s - Interface: %s - Factory: %s";
 	private static final String MULTIPLE_MODULES = "Multiple Spring Data modules found, entering strict repository configuration mode";
 	private static final String NON_DEFAULT_AUTOWIRE_CANDIDATE_RESOLVER = "Non-default AutowireCandidateResolver (%s) detected. Skipping the registration of LazyRepositoryInjectionPointResolver. Lazy repository injection will not be working";
+
+	private static final List<Class<?>> DEFAULT_AUTOWIRE_CANDIDATE_RESOLVERS = List
+			.of(ContextAnnotationAutowireCandidateResolver.class, LazyRepositoryInjectionPointResolver.class);
 
 	private static final Log logger = LogFactory.getLog(RepositoryConfigurationDelegate.class);
 
@@ -247,31 +250,28 @@ public class RepositoryConfigurationDelegate {
 	private static void potentiallyLazifyRepositories(Map<String, RepositoryConfiguration<?>> configurations,
 			BeanDefinitionRegistry registry, BootstrapMode mode) {
 
-		if (!DefaultListableBeanFactory.class.isInstance(registry) || BootstrapMode.DEFAULT.equals(mode)) {
+		if (!(registry instanceof DefaultListableBeanFactory beanFactory) || BootstrapMode.DEFAULT.equals(mode)) {
 			return;
 		}
 
-		DefaultListableBeanFactory beanFactory = DefaultListableBeanFactory.class.cast(registry);
 		AutowireCandidateResolver resolver = beanFactory.getAutowireCandidateResolver();
 
-		if (!Arrays.asList(ContextAnnotationAutowireCandidateResolver.class, LazyRepositoryInjectionPointResolver.class)
-				.contains(resolver.getClass())) {
+		if (!DEFAULT_AUTOWIRE_CANDIDATE_RESOLVERS.contains(resolver.getClass())) {
 
 			logger.warn(LogMessage.format(NON_DEFAULT_AUTOWIRE_CANDIDATE_RESOLVER, resolver.getClass().getName()));
-
 			return;
 		}
 
-		AutowireCandidateResolver newResolver = LazyRepositoryInjectionPointResolver.class.isInstance(resolver) //
-				? LazyRepositoryInjectionPointResolver.class.cast(resolver).withAdditionalConfigurations(configurations) //
+		AutowireCandidateResolver newResolver = resolver instanceof LazyRepositoryInjectionPointResolver lazy //
+				? lazy.withAdditionalConfigurations(configurations) //
 				: new LazyRepositoryInjectionPointResolver(configurations);
 
 		beanFactory.setAutowireCandidateResolver(newResolver);
 
-		if (mode.equals(BootstrapMode.DEFERRED)) {
+		if (mode.equals(BootstrapMode.DEFERRED)
+				&& !beanFactory.containsBean(DeferredRepositoryInitializationListener.class.getName())) {
 
 			logger.debug("Registering deferred repository initialization listener.");
-
 			beanFactory.registerSingleton(DeferredRepositoryInitializationListener.class.getName(),
 					new DeferredRepositoryInitializationListener(beanFactory));
 		}
@@ -283,7 +283,7 @@ public class RepositoryConfigurationDelegate {
 	 * scanning.
 	 *
 	 * @return {@literal true} if multiple data store repository implementations are present in the application. This
-	 *         typically means an Spring application is using more than 1 type of data store.
+	 *         typically means a Spring application is using more than 1 type of data store.
 	 */
 	private boolean multipleStoresDetected() {
 
@@ -316,8 +316,7 @@ public class RepositoryConfigurationDelegate {
 	 * @param configuration must not be {@literal null}.
 	 * @return can be {@literal null}.
 	 */
-	@Nullable
-	private ResolvableType getRepositoryFactoryBeanType(RepositoryConfiguration<?> configuration) {
+	private @Nullable ResolvableType getRepositoryFactoryBeanType(RepositoryConfiguration<?> configuration) {
 
 		String interfaceName = configuration.getRepositoryInterface();
 		ClassLoader classLoader = resourceLoader.getClassLoader() == null

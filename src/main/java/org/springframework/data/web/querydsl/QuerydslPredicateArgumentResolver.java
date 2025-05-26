@@ -81,9 +81,8 @@ public class QuerydslPredicateArgumentResolver extends QuerydslPredicateArgument
 		super(factory, querydslPredicateBuilderCustomizer);
 	}
 
-	@Nullable
 	@Override
-	public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
+	public @Nullable Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
 
 		MultiValueMap<String, String> queryParameters = getQueryParameters(webRequest);

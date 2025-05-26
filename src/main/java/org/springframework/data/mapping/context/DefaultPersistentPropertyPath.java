@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,13 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.PersistentPropertyPath;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -56,7 +58,7 @@ class DefaultPersistentPropertyPath<P extends PersistentProperty<P>> implements 
 	/**
 	 * Creates an empty {@link DefaultPersistentPropertyPath}.
 	 *
-	 * @return
+	 * @return an empty {@link DefaultPersistentPropertyPath}.
 	 */
 	static <T extends PersistentProperty<T>> DefaultPersistentPropertyPath<T> empty() {
 		return new DefaultPersistentPropertyPath<T>(Collections.emptyList());
@@ -181,9 +183,8 @@ class DefaultPersistentPropertyPath<P extends PersistentProperty<P>> implements 
 		return new DefaultPersistentPropertyPath<>(properties.subList(base.getLength(), getLength()));
 	}
 
-	@Nullable
 	@Override
-	public PersistentPropertyPath<P> getParentPath() {
+	public @Nullable PersistentPropertyPath<P> getParentPath() {
 
 		int size = properties.size();
 
@@ -206,6 +207,7 @@ class DefaultPersistentPropertyPath<P extends PersistentProperty<P>> implements 
 	 * @param type can be {@literal null}.
 	 * @return
 	 */
+	@Contract("null -> false")
 	public boolean containsPropertyOfType(@Nullable TypeInformation<?> type) {
 
 		if (type == null) {
@@ -241,7 +243,6 @@ class DefaultPersistentPropertyPath<P extends PersistentProperty<P>> implements 
 	}
 
 	@Override
-	@Nullable
 	public String toString() {
 		return toDotPath();
 	}

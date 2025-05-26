@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,14 @@ package org.springframework.data.repository.config;
 
 import java.util.Properties;
 
+import org.jspecify.annotations.NonNull;
+
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.springframework.data.repository.core.NamedQueries;
-import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -51,6 +52,7 @@ public class NamedQueriesBeanDefinitionParser implements BeanDefinitionParser {
 		this.defaultLocation = defaultLocation;
 	}
 
+	@Override
 	@NonNull
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
 

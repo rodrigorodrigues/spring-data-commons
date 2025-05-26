@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -70,7 +72,6 @@ import org.springframework.data.util.NullableWrapperConverters;
 import org.springframework.data.util.Optionals;
 import org.springframework.data.util.Streamable;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.ReflectionUtils.FieldCallback;
@@ -141,7 +142,7 @@ public abstract class AbstractMappingContext<E extends MutablePersistentEntity<?
 	 * already set.
 	 *
 	 * @param applicationContext the ApplicationContext object to be used by this object.
-	 * @throws BeansException
+	 * @throws BeansException in case of initialization errors.
 	 */
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -159,7 +160,7 @@ public abstract class AbstractMappingContext<E extends MutablePersistentEntity<?
 
 	/**
 	 * @param beanFactory owning BeanFactory.
-	 * @throws BeansException
+	 * @throws BeansException in case of initialization errors.
 	 * @since 3.3
 	 */
 	@Override
@@ -565,9 +566,9 @@ public abstract class AbstractMappingContext<E extends MutablePersistentEntity<?
 
 	/**
 	 * Returns whether a {@link PersistentEntity} instance should be created for the given {@link TypeInformation}. By
-	 * default this will reject all types considered simple and non-supported Kotlin classes, but it might be necessary to
-	 * tweak that in case you have registered custom converters for top level types (which renders them to be considered
-	 * simple) but still need meta-information about them.
+	 * default, this will reject all types considered simple and non-supported Kotlin classes, but it might be necessary
+	 * to tweak that in case you have registered custom converters for top level types (which renders them to be
+	 * considered simple) but still need meta-information about them.
 	 *
 	 * @param type will never be {@literal null}.
 	 * @return
@@ -673,7 +674,7 @@ public abstract class AbstractMappingContext<E extends MutablePersistentEntity<?
 			});
 		}
 
-		protected boolean shouldSkipOverrideProperty(P property) {
+		private boolean shouldSkipOverrideProperty(P property) {
 
 			P existingProperty = entity.getPersistentProperty(property.getName());
 
@@ -758,7 +759,7 @@ public abstract class AbstractMappingContext<E extends MutablePersistentEntity<?
 	 *
 	 * @author Oliver Gierke
 	 */
-	static enum PersistentPropertyFilter implements FieldFilter {
+	enum PersistentPropertyFilter implements FieldFilter {
 
 		INSTANCE;
 

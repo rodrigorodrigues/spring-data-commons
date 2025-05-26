@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -36,7 +38,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.domain.Sort.Order;
 import org.springframework.hateoas.RepresentationModel;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -109,7 +110,7 @@ public abstract class SpringDataJaxb {
 	 * @param adapter must not be {@literal null}.
 	 * @return
 	 */
-	public static <T, S> List<T> unmarshal(Collection<S> source, XmlAdapter<S, T> adapter) {
+	public static <T, S> List<T> unmarshal(@Nullable Collection<S> source, XmlAdapter<S, T> adapter) {
 
 		Assert.notNull(adapter, "Adapter must not be null");
 

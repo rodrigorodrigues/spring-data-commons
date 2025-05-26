@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ public class DummyRepositoryFactoryBean<T extends Repository<S, ID>, S, ID exten
 		extends RepositoryFactoryBeanSupport<T, S, ID> {
 
 	private final T repository;
+	private RepositoryFragmentsContributor repositoryFragmentsContributor = RepositoryFragmentsContributor.empty();
 
 	public DummyRepositoryFactoryBean(Class<? extends T> repositoryInterface) {
 
@@ -36,6 +37,19 @@ public class DummyRepositoryFactoryBean<T extends Repository<S, ID>, S, ID exten
 
 		this.repository = mock(repositoryInterface);
 		setMappingContext(new SampleMappingContext());
+	}
+
+	public T getRepository() {
+		return repository;
+	}
+
+	@Override
+	public RepositoryFragmentsContributor getRepositoryFragmentsContributor() {
+		return repositoryFragmentsContributor;
+	}
+
+	public void setRepositoryFragmentsContributor(RepositoryFragmentsContributor repositoryFragmentsContributor) {
+		this.repositoryFragmentsContributor = repositoryFragmentsContributor;
 	}
 
 	@Override

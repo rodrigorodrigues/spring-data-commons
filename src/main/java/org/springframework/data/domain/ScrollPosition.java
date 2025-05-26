@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 the original author or authors.
+ * Copyright 2023-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ public interface ScrollPosition {
 	/**
 	 * Returns whether the current scroll position is the initial one.
 	 *
-	 * @return
+	 * @return {@literal true} if the current scroll position is the initial one.
 	 */
 	boolean isInitial();
 
@@ -54,7 +54,7 @@ public interface ScrollPosition {
 	/**
 	 * Creates a new {@link ScrollPosition} from an {@code offset}.
 	 *
-	 * @param offset
+	 * @param offset the scroll offset.
 	 * @return a new {@link OffsetScrollPosition} with the given {@code offset}.
 	 */
 	static OffsetScrollPosition offset(long offset) {
@@ -111,4 +111,5 @@ public interface ScrollPosition {
 			return this == FORWARD ? BACKWARD : FORWARD;
 		}
 	}
+
 }

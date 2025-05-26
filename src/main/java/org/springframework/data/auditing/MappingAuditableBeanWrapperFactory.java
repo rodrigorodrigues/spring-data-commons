@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.ConversionService;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -40,6 +42,7 @@ import org.springframework.data.mapping.PersistentPropertyPaths;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.mapping.context.PersistentEntities;
 import org.springframework.data.util.Lazy;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 
 /**
@@ -193,7 +196,7 @@ public class MappingAuditableBeanWrapperFactory extends DefaultAuditableBeanWrap
 		}
 
 		@Override
-		public Object setCreatedBy(Object value) {
+		public @Nullable Object setCreatedBy(@Nullable Object value) {
 			return setProperty(metadata.createdByPaths, value);
 		}
 
@@ -203,7 +206,7 @@ public class MappingAuditableBeanWrapperFactory extends DefaultAuditableBeanWrap
 		}
 
 		@Override
-		public Object setLastModifiedBy(Object value) {
+		public @Nullable Object setLastModifiedBy(@Nullable Object value) {
 			return setProperty(metadata.lastModifiedByPaths, value);
 		}
 
@@ -226,8 +229,10 @@ public class MappingAuditableBeanWrapperFactory extends DefaultAuditableBeanWrap
 			return accessor.getBean();
 		}
 
+		@Nullable
+		@Contract("_, null -> null; _, !null -> !null")
 		private <S> S setProperty(
-				PersistentPropertyPaths<?, ? extends PersistentProperty<?>> paths, S value) {
+				PersistentPropertyPaths<?, ? extends PersistentProperty<?>> paths, @Nullable S value) {
 
 			paths.forEach(it -> this.accessor.setProperty(it, value, OPTIONS));
 

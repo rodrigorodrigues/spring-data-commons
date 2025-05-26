@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ import java.io.IOException;
 
 import javax.xml.transform.stream.StreamSource;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.io.Resource;
-import org.springframework.lang.Nullable;
 import org.springframework.oxm.Unmarshaller;
 import org.springframework.util.Assert;
 
@@ -32,9 +33,6 @@ public class UnmarshallingResourceReader implements ResourceReader {
 
 	private final Unmarshaller unmarshaller;
 
-	/**
-	 * @param unmarshaller
-	 */
 	public UnmarshallingResourceReader(Unmarshaller unmarshaller) {
 		this.unmarshaller = unmarshaller;
 	}

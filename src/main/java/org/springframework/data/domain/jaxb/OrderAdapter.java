@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,12 @@ package org.springframework.data.domain.jaxb;
 
 import jakarta.xml.bind.annotation.adapters.XmlAdapter;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.domain.jaxb.SpringDataJaxb.OrderDto;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 
 /**
  * XmlAdapter to convert {@link Order} instances into {@link OrderDto}s and vice versa.
@@ -31,9 +33,8 @@ public class OrderAdapter extends XmlAdapter<OrderDto, Order> {
 
 	public static final OrderAdapter INSTANCE = new OrderAdapter();
 
-	@Nullable
 	@Override
-	public OrderDto marshal(@Nullable Order order) {
+	public @Nullable OrderDto marshal(@Nullable Order order) {
 
 		if (order == null) {
 			return null;
@@ -45,9 +46,9 @@ public class OrderAdapter extends XmlAdapter<OrderDto, Order> {
 		return dto;
 	}
 
-	@Nullable
+	@Contract("null -> null")
 	@Override
-	public Order unmarshal(@Nullable OrderDto source) {
+	public @Nullable Order unmarshal(@Nullable OrderDto source) {
 
 		if (source == null) {
 			return null;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 the original author or authors.
+ * Copyright 2023-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,11 +34,13 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.BeanInfoFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.KotlinDetector;
 import org.springframework.core.Ordered;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
@@ -55,7 +57,7 @@ import org.springframework.util.StringUtils;
 public class KotlinBeanInfoFactory implements BeanInfoFactory, Ordered {
 
 	@Override
-	public BeanInfo getBeanInfo(Class<?> beanClass) throws IntrospectionException {
+	public @Nullable BeanInfo getBeanInfo(Class<?> beanClass) throws IntrospectionException {
 
 		if (beanClass.isInterface() || beanClass.isEnum()) {
 			return null; // back-off to leave interface-based properties to the default mechanism.
@@ -94,18 +96,9 @@ public class KotlinBeanInfoFactory implements BeanInfoFactory, Ordered {
 
 			if (member instanceof KProperty<?> property) {
 
-				Method getter = ReflectJvmMapping.getJavaGetter(property);
 				Method setter = property instanceof KMutableProperty<?> kmp ? ReflectJvmMapping.getJavaSetter(kmp) : null;
-
-				if (getter == null) {
-					Type javaType = ReflectJvmMapping.getJavaType(property.getReturnType());
-					getter = ReflectionUtils.findMethod(beanClass,
-							javaType == Boolean.TYPE ? "is" : "get" + StringUtils.capitalize(property.getName()));
-				}
-
-				if (getter != null) {
-					getter = ClassUtils.getMostSpecificMethod(getter, beanClass);
-				}
+				Type javaType = ReflectJvmMapping.getJavaType(property.getReturnType());
+				Method getter = findGetter(beanClass, property, javaType);
 
 				if (getter != null && (Modifier.isStatic(getter.getModifiers()) || getter.getParameterCount() != 0)) {
 					continue;
@@ -121,6 +114,21 @@ public class KotlinBeanInfoFactory implements BeanInfoFactory, Ordered {
 				descriptors.put(property.getName(), new PropertyDescriptor(property.getName(), getter, setter));
 			}
 		}
+	}
+
+	private static @Nullable Method findGetter(Class<?> beanClass, KProperty<?> property, Type javaType) {
+
+		Method getter = ReflectJvmMapping.getJavaGetter(property);
+
+		if (getter == null && javaType == Boolean.TYPE) {
+			getter = ReflectionUtils.findMethod(beanClass, "is" + StringUtils.capitalize(property.getName()));
+		}
+
+		if (getter == null) {
+			getter = ReflectionUtils.findMethod(beanClass, "get" + StringUtils.capitalize(property.getName()));
+		}
+
+		return getter != null ? ClassUtils.getMostSpecificMethod(getter, beanClass) : null;
 	}
 
 	private static void collectBasicJavaProperties(Class<?> beanClass, Map<String, PropertyDescriptor> descriptors)
@@ -150,8 +158,8 @@ public class KotlinBeanInfoFactory implements BeanInfoFactory, Ordered {
 		}
 	}
 
-	@Nullable
-	private static Method specialize(Class<?> beanClass, @Nullable Method method) {
+	@Contract("_, null -> null; _, !null -> !null")
+	private static @Nullable Method specialize(Class<?> beanClass, @Nullable Method method) {
 
 		if (method == null) {
 			return method;
@@ -189,8 +197,7 @@ public class KotlinBeanInfoFactory implements BeanInfoFactory, Ordered {
 		}
 
 		@Override
-		@Nullable
-		public Method getReadMethod() {
+		public @Nullable Method getReadMethod() {
 			return this.readMethod;
 		}
 
@@ -204,5 +211,7 @@ public class KotlinBeanInfoFactory implements BeanInfoFactory, Ordered {
 		public Method getWriteMethod() {
 			return this.writeMethod;
 		}
+
 	}
+
 }

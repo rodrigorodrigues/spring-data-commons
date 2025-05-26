@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,11 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.Sort;
 import org.springframework.data.repository.query.ParameterAccessor;
 import org.springframework.data.repository.query.ParametersParameterAccessor;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -102,8 +103,7 @@ public abstract class AbstractQueryCreator<T, S> {
 	 * @param tree must not be {@literal null}.
 	 * @return
 	 */
-	@Nullable
-	private S createCriteria(PartTree tree) {
+	private @Nullable S createCriteria(PartTree tree) {
 
 		S base = null;
 		Iterator<Object> iterator = parameters.map(ParameterAccessor::iterator).orElse(Collections.emptyIterator());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package org.springframework.data.convert;
 import java.util.Arrays;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.data.convert.PropertyValueConverterFactories.BeanFactoryAwarePropertyValueConverterFactory;
 import org.springframework.data.convert.PropertyValueConverterFactories.CachingPropertyValueConverterFactory;
@@ -25,7 +27,6 @@ import org.springframework.data.convert.PropertyValueConverterFactories.ChainedP
 import org.springframework.data.convert.PropertyValueConverterFactories.ConfiguredInstanceServingValueConverterFactory;
 import org.springframework.data.convert.PropertyValueConverterFactories.SimplePropertyConverterFactory;
 import org.springframework.data.mapping.PersistentProperty;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -50,8 +51,7 @@ public interface PropertyValueConverterFactory {
 	 * @return can be {@literal null}.
 	 */
 	@SuppressWarnings("unchecked")
-	@Nullable
-	default <DV, SV, P extends ValueConversionContext<?>> PropertyValueConverter<DV, SV, P> getConverter(
+	default <DV, SV, P extends ValueConversionContext<?>> @Nullable PropertyValueConverter<DV, SV, P> getConverter(
 			PersistentProperty<?> property) {
 
 		AnnotatedPropertyValueConverterAccessor accessor = new AnnotatedPropertyValueConverterAccessor(property);
@@ -60,7 +60,7 @@ public interface PropertyValueConverterFactory {
 			return null;
 		}
 
-		return getConverter((Class<PropertyValueConverter<DV, SV, P>>) accessor.getValueConverterType());
+		return getConverter((Class<PropertyValueConverter<DV, SV, P>>) accessor.getRequiredValueConverterType());
 	}
 
 	/**
@@ -72,8 +72,7 @@ public interface PropertyValueConverterFactory {
 	 * @param <C> value conversion context to use.
 	 * @return can be {@literal null}.
 	 */
-	@Nullable
-	<DV, SV, C extends ValueConversionContext<?>> PropertyValueConverter<DV, SV, C> getConverter(
+	<DV, SV, C extends ValueConversionContext<?>> @Nullable PropertyValueConverter<DV, SV, C> getConverter(
 			Class<? extends PropertyValueConverter<DV, SV, C>> converterType);
 
 	/**

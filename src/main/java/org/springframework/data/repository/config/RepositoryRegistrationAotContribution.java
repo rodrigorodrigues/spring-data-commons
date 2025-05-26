@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,17 @@
 package org.springframework.data.repository.config;
 
 import java.io.Serializable;
-import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.aop.SpringProxy;
 import org.springframework.aop.framework.Advised;
@@ -34,20 +35,25 @@ import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.TypeReference;
 import org.springframework.beans.factory.aot.BeanRegistrationAotContribution;
 import org.springframework.beans.factory.aot.BeanRegistrationCode;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.aot.BeanRegistrationCodeFragments;
+import org.springframework.beans.factory.aot.BeanRegistrationCodeFragmentsDecorator;
 import org.springframework.beans.factory.support.RegisteredBean;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.core.DecoratingProxy;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.env.Environment;
 import org.springframework.data.aot.AotContext;
 import org.springframework.data.projection.EntityProjectionIntrospector;
 import org.springframework.data.projection.TargetAware;
 import org.springframework.data.repository.Repository;
+import org.springframework.data.repository.aot.generate.RepositoryContributor;
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.repository.core.support.RepositoryFragment;
+import org.springframework.data.util.Predicates;
 import org.springframework.data.util.QTypeContributor;
 import org.springframework.data.util.TypeContributor;
 import org.springframework.data.util.TypeUtils;
-import org.springframework.lang.Nullable;
+import org.springframework.javapoet.CodeBlock;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -56,77 +62,71 @@ import org.springframework.util.ClassUtils;
  * {@link BeanRegistrationAotContribution} used to contribute repository registrations.
  *
  * @author John Blum
+ * @author Christoph Strobl
+ * @author Mark Paluch
  * @since 3.0
  */
 public class RepositoryRegistrationAotContribution implements BeanRegistrationAotContribution {
 
+	private static final Log logger = LogFactory.getLog(RepositoryRegistrationAotContribution.class);
+
 	private static final String KOTLIN_COROUTINE_REPOSITORY_TYPE_NAME = "org.springframework.data.repository.kotlin.CoroutineCrudRepository";
 
-	/**
-	 * Factory method used to construct a new instance of {@link RepositoryRegistrationAotContribution} initialized with
-	 * the given, required {@link RepositoryRegistrationAotProcessor} from which this contribution was created.
-	 *
-	 * @param repositoryRegistrationAotProcessor reference back to the {@link RepositoryRegistrationAotProcessor} from
-	 *          which this contribution was created.
-	 * @return a new instance of {@link RepositoryRegistrationAotContribution}.
-	 * @throws IllegalArgumentException if the {@link RepositoryRegistrationAotProcessor} is {@literal null}.
-	 * @see RepositoryRegistrationAotProcessor
-	 */
-	public static RepositoryRegistrationAotContribution fromProcessor(
-			RepositoryRegistrationAotProcessor repositoryRegistrationAotProcessor) {
+	private final RepositoryRegistrationAotProcessor aotProcessor;
 
-		return new RepositoryRegistrationAotContribution(repositoryRegistrationAotProcessor);
-	}
+	private final AotRepositoryContext repositoryContext;
 
-	private AotRepositoryContext repositoryContext;
+	private @Nullable RepositoryContributor repositoryContributor;
 
-	private BiConsumer<AotRepositoryContext, GenerationContext> moduleContribution;
-
-	private final RepositoryRegistrationAotProcessor repositoryRegistrationAotProcessor;
+	private @Nullable BiFunction<AotRepositoryContext, GenerationContext, @Nullable RepositoryContributor> moduleContribution;
 
 	/**
 	 * Constructs a new instance of the {@link RepositoryRegistrationAotContribution} initialized with the given, required
 	 * {@link RepositoryRegistrationAotProcessor} from which this contribution was created.
 	 *
-	 * @param repositoryRegistrationAotProcessor reference back to the {@link RepositoryRegistrationAotProcessor} from
-	 *          which this contribution was created.
+	 * @param processor reference back to the {@link RepositoryRegistrationAotProcessor} from which this contribution was
+	 *          created.
+	 * @param context reference back to the {@link AotRepositoryContext} from which this contribution was created.
 	 * @throws IllegalArgumentException if the {@link RepositoryRegistrationAotProcessor} is {@literal null}.
 	 * @see RepositoryRegistrationAotProcessor
 	 */
-	protected RepositoryRegistrationAotContribution(
-			RepositoryRegistrationAotProcessor repositoryRegistrationAotProcessor) {
+	protected RepositoryRegistrationAotContribution(RepositoryRegistrationAotProcessor processor,
+			AotRepositoryContext context) {
 
-		Assert.notNull(repositoryRegistrationAotProcessor, "RepositoryRegistrationAotProcessor must not be null");
+		Assert.notNull(processor, "RepositoryRegistrationAotProcessor must not be null");
+		Assert.notNull(context, "AotRepositoryContext must not be null");
 
-		this.repositoryRegistrationAotProcessor = repositoryRegistrationAotProcessor;
+		this.aotProcessor = processor;
+		this.repositoryContext = context;
 	}
 
-	protected ConfigurableListableBeanFactory getBeanFactory() {
-		return getRepositoryRegistrationAotProcessor().getBeanFactory();
-	}
+	/**
+	 * Factory method used to construct a new instance of {@link RepositoryRegistrationAotContribution} initialized with
+	 * the given, required {@link RepositoryRegistrationAotProcessor} from which this contribution was created.
+	 *
+	 * @param processor reference back to the {@link RepositoryRegistrationAotProcessor} from which this contribution was
+	 *          created.
+	 * @return a new instance of {@link RepositoryRegistrationAotContribution} if a contribution can be made;
+	 *         {@literal null} if no contribution can be made.
+	 * @see RepositoryRegistrationAotProcessor
+	 */
+	public static @Nullable RepositoryRegistrationAotContribution load(RepositoryRegistrationAotProcessor processor,
+			RegisteredBean repositoryBean) {
 
-	protected Optional<BiConsumer<AotRepositoryContext, GenerationContext>> getModuleContribution() {
-		return Optional.ofNullable(this.moduleContribution);
-	}
+		RepositoryConfiguration<?> repositoryMetadata = processor.getRepositoryMetadata(repositoryBean);
 
-	protected AotRepositoryContext getRepositoryContext() {
+		if (repositoryMetadata == null) {
+			return null;
+		}
 
-		Assert.state(this.repositoryContext != null,
-				"The AOT RepositoryContext was not properly initialized; did you call the forBean(:RegisteredBean) method");
+		AotRepositoryContext repositoryContext = buildAotRepositoryContext(processor.getEnvironment(), repositoryBean,
+				repositoryMetadata);
 
-		return this.repositoryContext;
-	}
+		if (repositoryContext == null) {
+			return null;
+		}
 
-	protected RepositoryRegistrationAotProcessor getRepositoryRegistrationAotProcessor() {
-		return this.repositoryRegistrationAotProcessor;
-	}
-
-	public RepositoryInformation getRepositoryInformation() {
-		return getRepositoryContext().getRepositoryInformation();
-	}
-
-	private void logTrace(String message, Object... arguments) {
-		getRepositoryRegistrationAotProcessor().logTrace(message, arguments);
+		return new RepositoryRegistrationAotContribution(processor, repositoryContext);
 	}
 
 	/**
@@ -137,64 +137,69 @@ public class RepositoryRegistrationAotContribution implements BeanRegistrationAo
 	 * @return a {@link RepositoryRegistrationAotContribution} to contribute AOT metadata and code for the
 	 *         {@link Repository} {@link RegisteredBean}.
 	 * @throws IllegalArgumentException if the {@link RegisteredBean} is {@literal null}.
-	 * @see org.springframework.beans.factory.support.RegisteredBean
+	 * @deprecated since 4.0.
 	 */
-	public RepositoryRegistrationAotContribution forBean(RegisteredBean repositoryBean) {
-
-		Assert.notNull(repositoryBean, "The RegisteredBean for the repository must not be null");
+	@Deprecated(since = "4.0", forRemoval = true)
+	public @Nullable RepositoryRegistrationAotContribution forBean(RegisteredBean repositoryBean) {
 
 		RepositoryConfiguration<?> repositoryMetadata = getRepositoryRegistrationAotProcessor()
 				.getRepositoryMetadata(repositoryBean);
 
-		this.repositoryContext = buildAotRepositoryContext(repositoryBean, repositoryMetadata);
-
-		return this;
-	}
-
-	protected DefaultAotRepositoryContext buildAotRepositoryContext(RegisteredBean bean,
-			RepositoryConfiguration<?> repositoryMetadata) {
-
-		RepositoryInformation repositoryInformation = resolveRepositoryInformation(repositoryMetadata);
-
-		DefaultAotRepositoryContext repositoryContext = new DefaultAotRepositoryContext(
-				AotContext.from(this.getBeanFactory()));
-
-		repositoryContext.setBeanName(bean.getBeanName());
-		repositoryContext.setBasePackages(repositoryMetadata.getBasePackages().toSet());
-		repositoryContext.setIdentifyingAnnotations(resolveIdentifyingAnnotations());
-		repositoryContext.setRepositoryInformation(repositoryInformation);
-
-		return repositoryContext;
-	}
-
-	private Set<Class<? extends Annotation>> resolveIdentifyingAnnotations() {
-
-		Set<Class<? extends Annotation>> identifyingAnnotations = Collections.emptySet();
-
-		try {
-			// TODO: Getting all beans of type RepositoryConfigurationExtensionSupport will have the effect that
-			// if the user is currently operating in multi-store mode, then all identifying annotations from
-			// all stores will be included in the resulting Set.
-			// When using AOT, is multi-store mode allowed? I don't see why not, but does this work correctly
-			// with AOT, ATM?
-			Map<String, RepositoryConfigurationExtensionSupport> repositoryConfigurationExtensionBeans = getBeanFactory()
-					.getBeansOfType(RepositoryConfigurationExtensionSupport.class);
-
-			// repositoryConfigurationExtensionBeans.values().stream()
-			// .map(RepositoryConfigurationExtensionSupport::getIdentifyingAnnotations)
-			// .flatMap(Collection::stream)
-			// .collect(Collectors.toCollection(() -> identifyingAnnotations));
-
-		} catch (Throwable ignore) {
-			// Possible BeansException because no bean exists of type RepositoryConfigurationExtension,
-			// which included non-Singletons and occurred during eager initialization.
+		if (repositoryMetadata == null) {
+			return null;
 		}
 
-		return identifyingAnnotations;
+		AotRepositoryContext repositoryContext = buildAotRepositoryContext(aotProcessor.getEnvironment(), repositoryBean,
+				repositoryMetadata);
+
+		if (repositoryContext == null) {
+			return null;
+		}
+
+		return new RepositoryRegistrationAotContribution(getRepositoryRegistrationAotProcessor(), repositoryContext);
 	}
 
-	private RepositoryInformation resolveRepositoryInformation(RepositoryConfiguration<?> repositoryMetadata) {
-		return RepositoryBeanDefinitionReader.readRepositoryInformation(repositoryMetadata, getBeanFactory());
+	protected @Nullable BiFunction<AotRepositoryContext, GenerationContext, @Nullable RepositoryContributor> getModuleContribution() {
+		return this.moduleContribution;
+	}
+
+	protected AotRepositoryContext getRepositoryContext() {
+		return this.repositoryContext;
+	}
+
+	protected RepositoryRegistrationAotProcessor getRepositoryRegistrationAotProcessor() {
+		return this.aotProcessor;
+	}
+
+	public RepositoryInformation getRepositoryInformation() {
+		return getRepositoryContext().getRepositoryInformation();
+	}
+
+	private void logTrace(String message, Object... arguments) {
+		getRepositoryRegistrationAotProcessor().logTrace(message, arguments);
+	}
+
+	private static @Nullable AotRepositoryContext buildAotRepositoryContext(Environment environment, RegisteredBean bean,
+			RepositoryConfiguration<?> repositoryConfiguration) {
+
+		RepositoryBeanDefinitionReader reader = new RepositoryBeanDefinitionReader(bean);
+		RepositoryConfiguration<?> configuration = reader.getConfiguration();
+		RepositoryConfigurationExtensionSupport extension = reader.getConfigurationExtension();
+
+		if (configuration == null || extension == null) {
+			logger.warn(
+					"Cannot create AotRepositoryContext for bean [%s]. No RepositoryConfiguration/RepositoryConfigurationExtension. Please make sure to register the repository bean through @Enable…Repositories."
+							.formatted(bean.getBeanName()));
+			return null;
+		}
+		RepositoryInformation repositoryInformation = reader.getRepositoryInformation();
+		DefaultAotRepositoryContext repositoryContext = new DefaultAotRepositoryContext(bean, repositoryInformation,
+				extension.getModuleName(), AotContext.from(bean.getBeanFactory(), environment),
+				configuration.getConfigurationSource());
+
+		repositoryContext.setIdentifyingAnnotations(extension.getIdentifyingAnnotations());
+
+		return repositoryContext;
 	}
 
 	/**
@@ -204,7 +209,7 @@ public class RepositoryRegistrationAotContribution implements BeanRegistrationAo
 	 * @return this.
 	 */
 	public RepositoryRegistrationAotContribution withModuleContribution(
-			@Nullable BiConsumer<AotRepositoryContext, GenerationContext> moduleContribution) {
+			@Nullable BiFunction<AotRepositoryContext, GenerationContext, @Nullable RepositoryContributor> moduleContribution) {
 		this.moduleContribution = moduleContribution;
 		return this;
 	}
@@ -213,7 +218,47 @@ public class RepositoryRegistrationAotContribution implements BeanRegistrationAo
 	public void applyTo(GenerationContext generationContext, BeanRegistrationCode beanRegistrationCode) {
 
 		contributeRepositoryInfo(this.repositoryContext, generationContext);
-		getModuleContribution().ifPresent(it -> it.accept(getRepositoryContext(), generationContext));
+
+		var moduleContribution = getModuleContribution();
+		if (moduleContribution != null && this.repositoryContributor == null) {
+
+			this.repositoryContributor = moduleContribution.apply(getRepositoryContext(), generationContext);
+
+			if (this.repositoryContributor != null) {
+				this.repositoryContributor.contribute(generationContext);
+			}
+		}
+	}
+
+	@Override
+	public BeanRegistrationCodeFragments customizeBeanRegistrationCodeFragments(GenerationContext generationContext,
+			BeanRegistrationCodeFragments codeFragments) {
+
+		return new BeanRegistrationCodeFragmentsDecorator(codeFragments) {
+
+			@Override
+			public CodeBlock generateSetBeanDefinitionPropertiesCode(GenerationContext generationContext,
+					BeanRegistrationCode beanRegistrationCode, RootBeanDefinition beanDefinition,
+					Predicate<String> attributeFilter) {
+
+				if (repositoryContributor == null) { // no aot implementation -> go on as
+
+					return super.generateSetBeanDefinitionPropertiesCode(generationContext, beanRegistrationCode, beanDefinition,
+							attributeFilter);
+				}
+
+				AotRepositoryBeanDefinitionPropertiesDecorator decorator = new AotRepositoryBeanDefinitionPropertiesDecorator(
+						() -> super.generateSetBeanDefinitionPropertiesCode(generationContext, beanRegistrationCode, beanDefinition,
+								attributeFilter),
+						repositoryContributor);
+
+				return decorator.decorate();
+			}
+		};
+	}
+
+	public Predicate<Class<?>> typeFilter() { // like only document ones. // TODO: As in MongoDB?
+		return Predicates.isTrue();
 	}
 
 	private void contributeRepositoryInfo(AotRepositoryContext repositoryContext, GenerationContext contribution) {
@@ -222,7 +267,6 @@ public class RepositoryRegistrationAotContribution implements BeanRegistrationAo
 
 		logTrace("Contributing repository information for [%s]", repositoryInformation.getRepositoryInterface());
 
-		// TODO: is this the way?
 		contribution.getRuntimeHints().reflection()
 				.registerType(repositoryInformation.getRepositoryInterface(),
 						hint -> hint.withMembers(MemberCategory.INVOKE_PUBLIC_METHODS))
@@ -237,6 +281,7 @@ public class RepositoryRegistrationAotContribution implements BeanRegistrationAo
 		for (RepositoryFragment<?> fragment : getRepositoryInformation().getFragments()) {
 
 			Class<?> repositoryFragmentType = fragment.getSignatureContributor();
+			Optional<Class<?>> implementation = fragment.getImplementationClass();
 
 			contribution.getRuntimeHints().reflection().registerType(repositoryFragmentType, hint -> {
 
@@ -245,6 +290,17 @@ public class RepositoryRegistrationAotContribution implements BeanRegistrationAo
 				if (!repositoryFragmentType.isInterface()) {
 					hint.withMembers(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
 				}
+			});
+
+			implementation.ifPresent(typeToRegister -> {
+				contribution.getRuntimeHints().reflection().registerType(typeToRegister, hint -> {
+
+					hint.withMembers(MemberCategory.INVOKE_PUBLIC_METHODS);
+
+					if (!typeToRegister.isInterface()) {
+						hint.withMembers(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
+					}
+				});
 			});
 		}
 
@@ -274,12 +330,6 @@ public class RepositoryRegistrationAotContribution implements BeanRegistrationAo
 		}
 		// });
 
-		// Reactive Repositories
-		if (repositoryInformation.isReactiveRepository()) {
-			// TODO: do we still need this and how to configure it?
-			// registry.initialization().add(NativeInitializationEntry.ofBuildTimeType(configuration.getRepositoryInterface()));
-		}
-
 		// Kotlin
 		if (isKotlinCoroutineRepository(repositoryContext, repositoryInformation)) {
 			contribution.getRuntimeHints().reflection().registerTypes(kotlinRepositoryReflectionTypeReferences(),
@@ -287,7 +337,7 @@ public class RepositoryRegistrationAotContribution implements BeanRegistrationAo
 		}
 
 		// Repository query methods
-		repositoryInformation.getQueryMethods().map(repositoryInformation::getReturnedDomainClass)
+		repositoryInformation.getQueryMethods().stream().map(repositoryInformation::getReturnedDomainClass)
 				.filter(Class::isInterface).forEach(type -> {
 					if (EntityProjectionIntrospector.ProjectionPredicate.typeHierarchy().test(type,
 							repositoryInformation.getDomainType())) {
@@ -341,10 +391,5 @@ public class RepositoryRegistrationAotContribution implements BeanRegistrationAo
 				|| ClassUtils.isPrimitiveArray(type); //
 	}
 
-	// TODO What was this meant to be used for? Was this type filter maybe meant to be used in
-	// the TypeContributor.contribute(:Class, :Predicate :GenerationContext) method
-	// used in the contributeType(..) method above?
-	public Predicate<Class<?>> typeFilter() { // like only document ones. // TODO: As in MongoDB?
-		return it -> true;
-	}
+
 }

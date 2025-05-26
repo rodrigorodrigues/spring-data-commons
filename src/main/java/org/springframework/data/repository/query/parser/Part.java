@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -166,30 +166,45 @@ public class Part {
 	}
 
 	/**
-	 * The type of a method name part. Used to create query parts in various ways.
+	 * The type of method name part. Used to create query parts in various ways.
 	 *
 	 * @author Oliver Gierke
 	 * @author Thomas Darimont
 	 * @author Michael Cramer
 	 */
-	public static enum Type {
+	public enum Type {
 
-		BETWEEN(2, "IsBetween", "Between"), IS_NOT_NULL(0, "IsNotNull", "NotNull"), IS_NULL(0, "IsNull", "Null"), LESS_THAN(
-				"IsLessThan", "LessThan"), LESS_THAN_EQUAL("IsLessThanEqual", "LessThanEqual"), GREATER_THAN("IsGreaterThan",
-						"GreaterThan"), GREATER_THAN_EQUAL("IsGreaterThanEqual", "GreaterThanEqual"), BEFORE("IsBefore",
-								"Before"), AFTER("IsAfter", "After"), NOT_LIKE("IsNotLike", "NotLike"), LIKE("IsLike",
-										"Like"), STARTING_WITH("IsStartingWith", "StartingWith", "StartsWith"), ENDING_WITH("IsEndingWith",
-												"EndingWith", "EndsWith"), IS_NOT_EMPTY(0, "IsNotEmpty", "NotEmpty"), IS_EMPTY(0, "IsEmpty",
-														"Empty"), NOT_CONTAINING("IsNotContaining", "NotContaining", "NotContains"), CONTAINING(
-																"IsContaining", "Containing", "Contains"), NOT_IN("IsNotIn", "NotIn"), IN("IsIn",
-																		"In"), NEAR("IsNear", "Near"), WITHIN("IsWithin", "Within"), REGEX("MatchesRegex",
-																				"Matches", "Regex"), EXISTS(0, "Exists"), TRUE(0, "IsTrue", "True"), FALSE(0,
-																						"IsFalse", "False"), NEGATING_SIMPLE_PROPERTY("IsNot",
-																								"Not"), SIMPLE_PROPERTY("Is", "Equals");
+		BETWEEN(2, "IsBetween", "Between"), //
+		IS_NOT_NULL(0, "IsNotNull", "NotNull"), //
+		IS_NULL(0, "IsNull", "Null"), //
+		LESS_THAN("IsLessThan", "LessThan"), //
+		LESS_THAN_EQUAL("IsLessThanEqual", "LessThanEqual"), //
+		GREATER_THAN("IsGreaterThan", "GreaterThan"), //
+		GREATER_THAN_EQUAL("IsGreaterThanEqual", "GreaterThanEqual"), //
+		BEFORE("IsBefore", "Before"), //
+		AFTER("IsAfter", "After"), //
+		NOT_LIKE("IsNotLike", "NotLike"), //
+		LIKE("IsLike", "Like"), //
+		STARTING_WITH("IsStartingWith", "StartingWith", "StartsWith"), //
+		ENDING_WITH("IsEndingWith", "EndingWith", "EndsWith"), //
+		IS_NOT_EMPTY(0, "IsNotEmpty", "NotEmpty"), //
+		IS_EMPTY(0, "IsEmpty", "Empty"), //
+		NOT_CONTAINING("IsNotContaining", "NotContaining", "NotContains"), //
+		CONTAINING("IsContaining", "Containing", "Contains"), //
+		NOT_IN("IsNotIn", "NotIn"), //
+		IN("IsIn", "In"), //
+		NEAR("IsNear", "Near"), //
+		WITHIN("IsWithin", "Within"), //
+		REGEX("MatchesRegex", "Matches", "Regex"), //
+		EXISTS(0, "Exists"), //
+		TRUE(0, "IsTrue", "True"), //
+		FALSE(0, "IsFalse", "False"), //
+		NEGATING_SIMPLE_PROPERTY("IsNot", "Not"), //
+		SIMPLE_PROPERTY("Is", "Equals");
 
 		// Need to list them again explicitly as the order is important
 		// (esp. for IS_NULL, IS_NOT_NULL)
-		private static final List<Part.Type> ALL = Arrays.asList(IS_NOT_NULL, IS_NULL, BETWEEN, LESS_THAN, LESS_THAN_EQUAL,
+		private static final List<Part.Type> ALL = List.of(IS_NOT_NULL, IS_NULL, BETWEEN, LESS_THAN, LESS_THAN_EQUAL,
 				GREATER_THAN, GREATER_THAN_EQUAL, BEFORE, AFTER, NOT_LIKE, LIKE, STARTING_WITH, ENDING_WITH, IS_NOT_EMPTY,
 				IS_EMPTY, NOT_CONTAINING, CONTAINING, NOT_IN, IN, NEAR, WITHIN, REGEX, EXISTS, TRUE, FALSE,
 				NEGATING_SIMPLE_PROPERTY, SIMPLE_PROPERTY);
@@ -253,13 +268,13 @@ public class Part {
 		}
 
 		/**
-		 * Returns whether the the type supports the given raw property. Default implementation checks whether the property
-		 * ends with the registered keyword. Does not support the keyword if the property is a valid field as is.
+		 * Returns whether the type supports the given raw property. Default implementation checks whether the property ends
+		 * with the registered keyword. Does not support the keyword if the property is a valid field as is.
 		 *
 		 * @param property
 		 * @return
 		 */
-		protected boolean supports(String property) {
+		boolean supports(String property) {
 
 			for (String keyword : keywords) {
 				if (property.endsWith(keyword)) {

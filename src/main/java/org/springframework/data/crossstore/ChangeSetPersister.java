@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 package org.springframework.data.crossstore;
+
+import java.io.Serial;
 
 import org.springframework.dao.DataAccessException;
 
@@ -59,7 +61,7 @@ public interface ChangeSetPersister<K> {
 	 */
 	class NotFoundException extends Exception {
 
-		private static final long serialVersionUID = -8604207973816331140L;
+		private static final @Serial long serialVersionUID = -8604207973816331140L;
 	}
 
 }

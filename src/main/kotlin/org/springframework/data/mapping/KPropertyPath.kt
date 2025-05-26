@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2024 the original author or authors.
+ * Copyright 2018-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,12 +32,28 @@ private class KPropertyPath<T, U>(
 ) : KProperty<T> by child
 
 /**
+ * Abstraction of a property path that consists of parent [KProperty],
+ * and child property [KProperty], where parent [parent] has an [Iterable]
+ * of children, so it represents 1-M mapping.
+ *
+ * @author Mikhail Polivakha
+ * @since 3.5
+ */
+internal class KIterablePropertyPath<T, U>(
+	val parent: KProperty<Iterable<U?>?>,
+	val child: KProperty1<U, T>
+) : KProperty<T> by child
+
+/**
  * Recursively construct field name for a nested property.
  * @author Tjeu Kayim
+ * @author Mikhail Polivakha
  */
 internal fun asString(property: KProperty<*>): String {
 	return when (property) {
 		is KPropertyPath<*, *> ->
+			"${asString(property.parent)}.${property.child.name}"
+		is KIterablePropertyPath<*, *> ->
 			"${asString(property.parent)}.${property.child.name}"
 		else -> property.name
 	}
@@ -55,5 +71,26 @@ internal fun asString(property: KProperty<*>): String {
  * @author Yoann de Martino
  * @since 2.5
  */
+@JvmName("div")
 operator fun <T, U> KProperty<T?>.div(other: KProperty1<T, U>): KProperty<U> =
 	KPropertyPath(this, other)
+
+/**
+ * Builds [KPropertyPath] from Property References.
+ * Refer to a nested property in an embeddable or association.
+ *
+ * Note, that this function is different from [div] above in the
+ * way that it represents a division operator overloading for
+ * child references, where parent to child reference relation is 1-M, not 1-1.
+ * It implies that parent defines a [Collection] of children.
+ **
+ * For example, referring to the field "books.title":
+ * ```
+ * Author::books / Book::title contains "Bartleby"
+ * ```
+ * @author Mikhail Polivakha
+ * @since 3.5
+ */
+@JvmName("divIterable")
+operator fun <T, U> KProperty<Collection<T?>?>.div(other: KProperty1<T, U>): KProperty<U> =
+	KIterablePropertyPath(this, other)

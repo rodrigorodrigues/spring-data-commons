@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,9 @@ import java.beans.PropertyDescriptor;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.AbstractPropertyAccessor;
 import org.springframework.beans.BeanUtils;
@@ -42,8 +45,6 @@ import org.springframework.expression.spel.SpelEvaluationException;
 import org.springframework.expression.spel.SpelParserConfiguration;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.SimpleEvaluationContext;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.WebDataBinder;
 
@@ -131,15 +132,13 @@ class MapDataBinder extends WebDataBinder {
 			}
 		}
 
-		@Nullable
 		@Override
-		public TypeDescriptor getPropertyTypeDescriptor(String propertyName) throws BeansException {
+		public @Nullable TypeDescriptor getPropertyTypeDescriptor(String propertyName) throws BeansException {
 			throw new UnsupportedOperationException();
 		}
 
-		@Nullable
 		@Override
-		public Object getPropertyValue(String propertyName) throws BeansException {
+		public @Nullable Object getPropertyValue(String propertyName) throws BeansException {
 			throw new UnsupportedOperationException();
 		}
 

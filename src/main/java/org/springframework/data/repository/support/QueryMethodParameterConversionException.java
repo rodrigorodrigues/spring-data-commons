@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package org.springframework.data.repository.support;
 
+import java.io.Serial;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.core.convert.ConversionException;
 import org.springframework.util.Assert;
@@ -29,7 +31,7 @@ import org.springframework.util.Assert;
  */
 public class QueryMethodParameterConversionException extends RuntimeException {
 
-	private static final long serialVersionUID = -5818002272039533066L;
+	private static final @Serial long serialVersionUID = -5818002272039533066L;
 
 	private final Object source;
 	private final MethodParameter parameter;

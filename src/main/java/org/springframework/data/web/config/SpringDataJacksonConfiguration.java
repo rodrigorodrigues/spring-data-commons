@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,13 @@
  */
 package org.springframework.data.web.config;
 
+import java.io.Serial;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.Page;
@@ -26,7 +29,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.geo.GeoModule;
 import org.springframework.data.web.PagedModel;
 import org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 
 import com.fasterxml.jackson.databind.BeanDescription;
@@ -70,7 +72,7 @@ public class SpringDataJacksonConfiguration implements SpringDataJacksonModules 
 	 */
 	public static class PageModule extends SimpleModule {
 
-		private static final long serialVersionUID = 275254460581626332L;
+		private static final @Serial long serialVersionUID = 275254460581626332L;
 
 		private static final String UNPAGED_TYPE_NAME = "org.springframework.data.domain.Unpaged";
 		private static final Class<?> UNPAGED_TYPE;
@@ -104,7 +106,7 @@ public class SpringDataJacksonConfiguration implements SpringDataJacksonModules 
 		 */
 		static class UnpagedAsInstanceSerializer extends ToStringSerializerBase {
 
-			private static final long serialVersionUID = -1213451755610144637L;
+			private static final @Serial long serialVersionUID = -1213451755610144637L;
 
 			public UnpagedAsInstanceSerializer() {
 				super(Object.class);
@@ -121,9 +123,8 @@ public class SpringDataJacksonConfiguration implements SpringDataJacksonModules 
 
 		static class PageModelConverter extends StdConverter<Page<?>, PagedModel<?>> {
 
-			@Nullable
 			@Override
-			public PagedModel<?> convert(@Nullable Page<?> value) {
+			public @Nullable PagedModel<?> convert(@Nullable Page<?> value) {
 				return value == null ? null : new PagedModel<>(value);
 			}
 		}
@@ -142,7 +143,7 @@ public class SpringDataJacksonConfiguration implements SpringDataJacksonModules 
 						or Spring HATEOAS and Spring Data's PagedResourcesAssembler as documented in https://docs.spring.io/spring-data/commons/reference/repositories/core-extensions.html#core.web.pageables.
 					""";
 
-			private static final long serialVersionUID = 954857444010009875L;
+			private static final @Serial long serialVersionUID = 954857444010009875L;
 
 			private boolean warningRendered = false;
 

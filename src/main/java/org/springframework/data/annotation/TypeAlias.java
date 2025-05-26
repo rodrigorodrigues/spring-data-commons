@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import org.springframework.data.mapping.PersistentEntity;
  * {@link PersistentEntity}s.
  *
  * @author Oliver Gierke
+ * @see org.springframework.data.mapping.Alias
  */
 @Documented
 @Inherited
@@ -38,9 +39,7 @@ import org.springframework.data.mapping.PersistentEntity;
 public @interface TypeAlias {
 
 	/**
-	 * The type alias to be used when persisting
-	 *
-	 * @return
+	 * The type alias to be used when persisting.
 	 */
 	String value();
 }

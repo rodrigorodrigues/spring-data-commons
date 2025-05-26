@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,10 @@ package org.springframework.data.repository.core.support;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.function.Supplier;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanClassLoaderAware;
@@ -29,24 +32,24 @@ import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.EnvironmentAware;
+import org.springframework.context.aot.AbstractAotProcessor;
 import org.springframework.core.env.Environment;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.context.MappingContext;
+import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.core.NamedQueries;
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.RepositoryComposition.RepositoryFragments;
-import org.springframework.data.repository.query.ExtensionAwareQueryMethodEvaluationContextProvider;
 import org.springframework.data.repository.query.QueryLookupStrategy;
 import org.springframework.data.repository.query.QueryLookupStrategy.Key;
 import org.springframework.data.repository.query.QueryMethod;
-import org.springframework.data.repository.query.QueryMethodEvaluationContextProvider;
 import org.springframework.data.repository.query.QueryMethodValueEvaluationContextAccessor;
+import org.springframework.data.repository.query.ValueExpressionDelegate;
 import org.springframework.data.spel.EvaluationContextProvider;
 import org.springframework.data.util.Lazy;
-import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
 /**
@@ -72,25 +75,25 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 
 	private final Class<? extends T> repositoryInterface;
 
-	private RepositoryFactorySupport factory;
+	private @Nullable RepositoryFactorySupport factory;
 	private boolean exposeMetadata;
-	private Key queryLookupStrategyKey;
-	private Optional<Class<?>> repositoryBaseClass = Optional.empty();
-	private Optional<Object> customImplementation = Optional.empty();
-	private Optional<RepositoryFragments> repositoryFragments = Optional.empty();
+	private @Nullable Key queryLookupStrategyKey;
+	private @Nullable Class<?> repositoryBaseClass;
+	private @Nullable Object customImplementation;
+	private final List<RepositoryFragmentsFunction> fragments = new ArrayList<>();
 	private NamedQueries namedQueries = PropertiesBasedNamedQueries.EMPTY;
-	private Optional<MappingContext<?, ?>> mappingContext = Optional.empty();
-	private ClassLoader classLoader;
-	private ApplicationEventPublisher publisher;
-	private BeanFactory beanFactory;
-	private Environment environment;
-	private boolean lazyInit = false;
-	private Optional<EvaluationContextProvider> evaluationContextProvider = Optional.empty();
+	private @Nullable MappingContext<?, ?> mappingContext;
+	private @Nullable ClassLoader classLoader;
+	private @Nullable ApplicationEventPublisher publisher;
+	private @Nullable BeanFactory beanFactory;
+	private @Nullable Environment environment;
+	private boolean lazyInit = Boolean.getBoolean(AbstractAotProcessor.AOT_PROCESSING); // use lazy-init in AOT processing
+	private @Nullable EvaluationContextProvider evaluationContextProvider;
 	private final List<RepositoryFactoryCustomizer> repositoryFactoryCustomizers = new ArrayList<>();
 
-	private Lazy<T> repository;
-
-	private RepositoryMetadata repositoryMetadata;
+	private RepositoryFragments cachedFragments = RepositoryFragments.empty();
+	private @Nullable Lazy<T> repository;
+	private @Nullable RepositoryMetadata repositoryMetadata;
 
 	/**
 	 * Creates a new {@link RepositoryFactoryBeanSupport} for the given repository interface.
@@ -110,7 +113,7 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 	 * @since 1.11
 	 */
 	public void setRepositoryBaseClass(Class<?> repositoryBaseClass) {
-		this.repositoryBaseClass = Optional.ofNullable(repositoryBaseClass);
+		this.repositoryBaseClass = repositoryBaseClass;
 	}
 
 	/**
@@ -142,16 +145,28 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 	 * @param customImplementation
 	 */
 	public void setCustomImplementation(Object customImplementation) {
-		this.customImplementation = Optional.of(customImplementation);
+		this.customImplementation = customImplementation;
 	}
 
 	/**
-	 * Setter to inject repository fragments.
+	 * Setter to inject repository fragments. This method is additive and will add another {@link RepositoryFragments} to
+	 * the already existing list of {@link RepositoryFragmentsFunction}.
 	 *
 	 * @param repositoryFragments
 	 */
 	public void setRepositoryFragments(RepositoryFragments repositoryFragments) {
-		this.repositoryFragments = Optional.of(repositoryFragments);
+		setRepositoryFragmentsFunction(RepositoryFragmentsFunction.just(repositoryFragments));
+	}
+
+	/**
+	 * Setter to inject repository fragments. This method is additive and will add another {@link RepositoryFragments} to
+	 * the already existing list of {@link RepositoryFragmentsFunction}.
+	 *
+	 * @param fragmentsFunction
+	 * @since 4.0
+	 */
+	public void setRepositoryFragmentsFunction(RepositoryFragmentsFunction fragmentsFunction) {
+		this.fragments.add(fragmentsFunction);
 	}
 
 	/**
@@ -170,7 +185,7 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 	 * @param mappingContext
 	 */
 	protected void setMappingContext(MappingContext<?, ?> mappingContext) {
-		this.mappingContext = Optional.of(mappingContext);
+		this.mappingContext = mappingContext;
 	}
 
 	/**
@@ -180,19 +195,7 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 	 * @since 3.4
 	 */
 	public void setEvaluationContextProvider(EvaluationContextProvider evaluationContextProvider) {
-		this.evaluationContextProvider = Optional.of(evaluationContextProvider);
-	}
-
-	/**
-	 * Sets the {@link QueryMethodEvaluationContextProvider} to be used to evaluate SpEL expressions in manually defined
-	 * queries.
-	 *
-	 * @param evaluationContextProvider must not be {@literal null}.
-	 * @deprecated since 3.4, use {@link #setEvaluationContextProvider(EvaluationContextProvider)} instead.
-	 */
-	@Deprecated(since = "3.4", forRemoval = true)
-	public void setEvaluationContextProvider(QueryMethodEvaluationContextProvider evaluationContextProvider) {
-		setEvaluationContextProvider(evaluationContextProvider.getEvaluationContextProvider());
+		this.evaluationContextProvider = evaluationContextProvider;
 	}
 
 	/**
@@ -227,7 +230,7 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 
 		this.beanFactory = beanFactory;
 
-		if (this.evaluationContextProvider.isEmpty() && beanFactory instanceof ListableBeanFactory lbf) {
+		if (this.evaluationContextProvider == null && beanFactory instanceof ListableBeanFactory lbf) {
 			this.evaluationContextProvider = createDefaultEvaluationContextProvider(lbf);
 		}
 	}
@@ -241,27 +244,12 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 	 * Create a default {@link EvaluationContextProvider} (or subclass) from {@link ListableBeanFactory}.
 	 *
 	 * @param beanFactory the bean factory to use.
-	 * @return the default instance. May be {@link Optional#empty()}.
+	 * @return the default instance. May be {@code null}.
 	 * @since 3.4
 	 */
-	protected Optional<EvaluationContextProvider> createDefaultEvaluationContextProvider(
+	protected @Nullable EvaluationContextProvider createDefaultEvaluationContextProvider(
 			ListableBeanFactory beanFactory) {
-		return createDefaultQueryMethodEvaluationContextProvider(beanFactory)
-				.map(QueryMethodEvaluationContextProvider::getEvaluationContextProvider);
-	}
-
-	/**
-	 * Create a default {@link QueryMethodEvaluationContextProvider} (or subclass) from {@link ListableBeanFactory}.
-	 *
-	 * @param beanFactory the bean factory to use.
-	 * @return the default instance. May be {@link Optional#empty()}.
-	 * @since 2.4
-	 * @deprecated since 3.4, use {@link #createDefaultEvaluationContextProvider(ListableBeanFactory)} instead.
-	 */
-	@Deprecated(since = "3.4", forRemoval = true)
-	protected Optional<QueryMethodEvaluationContextProvider> createDefaultQueryMethodEvaluationContextProvider(
-			ListableBeanFactory beanFactory) {
-		return Optional.of(new ExtensionAwareQueryMethodEvaluationContextProvider(beanFactory));
+		return QueryMethodValueEvaluationContextAccessor.createEvaluationContextProvider(beanFactory);
 	}
 
 	@Override
@@ -272,45 +260,58 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 	@Override
 	@SuppressWarnings("unchecked")
 	public EntityInformation<S, ID> getEntityInformation() {
-		return (EntityInformation<S, ID>) factory.getEntityInformation(repositoryMetadata.getDomainType());
+		return (EntityInformation<S, ID>) getRequiredFactory()
+				.getEntityInformation(getRequiredRepositoryMetadata());
 	}
 
 	@Override
 	public RepositoryInformation getRepositoryInformation() {
+		return getRequiredFactory().getRepositoryInformation(getRequiredRepositoryMetadata(), cachedFragments);
+	}
 
-		RepositoryFragments fragments = customImplementation.map(RepositoryFragments::just)//
-				.orElse(RepositoryFragments.empty());
-
-		return factory.getRepositoryInformation(repositoryMetadata, fragments);
+	@Override
+	public RepositoryFragmentsContributor getRepositoryFragmentsContributor() {
+		return RepositoryFragmentsContributor.empty();
 	}
 
 	@Override
 	public PersistentEntity<?, ?> getPersistentEntity() {
 
-		return mappingContext.orElseThrow(() -> new IllegalStateException("No MappingContext available"))
-				.getRequiredPersistentEntity(repositoryMetadata.getDomainType());
+		Assert.state(mappingContext != null, "No MappingContext available");
+
+		return mappingContext.getRequiredPersistentEntity(getRequiredRepositoryMetadata().getDomainType());
 	}
 
 	@Override
 	public List<QueryMethod> getQueryMethods() {
-		return factory.getQueryMethods();
+		return getRequiredFactory().getQueryMethods();
 	}
 
 	@Override
-	@NonNull
-	public T getObject() {
+	public @NonNull T getObject() {
+
+		Assert.state(repository != null, "RepositoryFactory is not initialized");
+
 		return this.repository.get();
 	}
 
 	@Override
-	@NonNull
-	public Class<? extends T> getObjectType() {
+	public @NonNull Class<? extends T> getObjectType() {
 		return repositoryInterface;
 	}
 
-	@Override
-	public boolean isSingleton() {
-		return true;
+	RepositoryFactorySupport getRequiredFactory() {
+
+		Assert.state(factory != null, "RepositoryFactory is not initialized");
+
+		return factory;
+	}
+
+	RepositoryMetadata getRequiredRepositoryMetadata() {
+
+		Assert.state(repositoryMetadata != null, "RepositoryMetadata is not initialized");
+
+		return repositoryMetadata;
 	}
 
 	@Override
@@ -320,10 +321,13 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 		this.factory.setExposeMetadata(exposeMetadata);
 		this.factory.setQueryLookupStrategyKey(queryLookupStrategyKey);
 		this.factory.setNamedQueries(namedQueries);
-		this.factory.setEvaluationContextProvider(
-				evaluationContextProvider.orElse(QueryMethodValueEvaluationContextAccessor.DEFAULT_CONTEXT_PROVIDER));
+		this.factory.setEvaluationContextProvider(evaluationContextProvider != null ? evaluationContextProvider
+				: QueryMethodValueEvaluationContextAccessor.DEFAULT_CONTEXT_PROVIDER);
 		this.factory.setBeanClassLoader(classLoader);
-		this.factory.setBeanFactory(beanFactory);
+
+		if (beanFactory != null) {
+			this.factory.setBeanFactory(beanFactory);
+		}
 
 		if (this.publisher != null) {
 			this.factory.addRepositoryProxyPostProcessor(new EventPublishingRepositoryProxyPostProcessor(publisher));
@@ -333,24 +337,24 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 			this.factory.setEnvironment(this.environment);
 		}
 
-		repositoryBaseClass.ifPresent(this.factory::setRepositoryBaseClass);
+		if (repositoryBaseClass != null) {
+			this.factory.setRepositoryBaseClass(repositoryBaseClass);
+		}
 
 		this.repositoryFactoryCustomizers.forEach(customizer -> customizer.customize(this.factory));
 
-		RepositoryFragments customImplementationFragment = customImplementation //
-				.map(RepositoryFragments::just) //
-				.orElseGet(RepositoryFragments::empty);
+		RepositoryMetadata metadata = this.factory.getRepositoryMetadata(repositoryInterface);
+		RepositoryFragments repositoryFragments = getRepositoryFragments(metadata);
 
-		RepositoryFragments repositoryFragmentsToUse = this.repositoryFragments //
-				.orElseGet(RepositoryFragments::empty) //
-				.append(customImplementationFragment);
-
-		this.repositoryMetadata = this.factory.getRepositoryMetadata(repositoryInterface);
-
-		this.repository = Lazy.of(() -> this.factory.getRepository(repositoryInterface, repositoryFragmentsToUse));
+		this.cachedFragments = repositoryFragments;
+		this.repositoryMetadata = metadata;
+		this.repository = Lazy.of(() -> getRequiredFactory().getRepository(repositoryInterface, repositoryFragments));
 
 		// Make sure the aggregate root type is present in the MappingContext (e.g. for auditing)
-		this.mappingContext.ifPresent(it -> it.getPersistentEntity(repositoryMetadata.getDomainType()));
+
+		if (this.mappingContext != null) {
+			this.mappingContext.getPersistentEntity(repositoryMetadata.getDomainType());
+		}
 
 		if (!lazyInit) {
 			this.repository.get();
@@ -360,7 +364,108 @@ public abstract class RepositoryFactoryBeanSupport<T extends Repository<S, ID>, 
 	/**
 	 * Create the actual {@link RepositoryFactorySupport} instance.
 	 *
-	 * @return
+	 * @return the repository factory.
 	 */
 	protected abstract RepositoryFactorySupport createRepositoryFactory();
+
+	private RepositoryFragments getRepositoryFragments(RepositoryMetadata repositoryMetadata) {
+
+		RepositoryFactorySupport factory = getRequiredFactory();
+		ValueExpressionDelegate valueExpressionDelegate = factory.getValueExpressionDelegate();
+		List<RepositoryFragmentsFunction> functions = new ArrayList<>(this.fragments);
+
+		if (customImplementation != null) {
+			functions.add(0, RepositoryFragmentsFunction.just(RepositoryFragments.just(customImplementation)));
+		}
+
+		FragmentCreationContext creationContext = new DefaultFragmentCreationContext(repositoryMetadata,
+				valueExpressionDelegate, factory::getProjectionFactory);
+
+		RepositoryFragments fragments = RepositoryFragments.empty();
+		for (RepositoryFragmentsFunction function : functions) {
+			fragments = fragments.append(function.getRepositoryFragments(this.beanFactory,
+					creationContext));
+		}
+
+		return fragments;
+	}
+
+	/**
+	 * Functional interface to obtain {@link RepositoryFragments} for a given {@link BeanFactory} (can be
+	 * {@literal null}), {@link EntityInformation} and {@link ValueExpressionDelegate}.
+	 * <p>
+	 * This interface is used within the Framework and should not be used in application code.
+	 *
+	 * @since 4.0
+	 */
+	public interface RepositoryFragmentsFunction {
+
+		/**
+		 * Return {@link RepositoryFragments} for a given {@link BeanFactory} (can be {@literal null}),
+		 * {@link EntityInformation} and {@link ValueExpressionDelegate}.
+		 *
+		 * @param beanFactory can be {@literal null}.
+		 * @param context the creation context.
+		 * @return the repository fragments to use.
+		 */
+		RepositoryFragments getRepositoryFragments(@Nullable BeanFactory beanFactory,
+				FragmentCreationContext context);
+
+		/**
+		 * Factory method to create {@link RepositoryFragmentsFunction} for a resolved {@link RepositoryFragments} object.
+		 *
+		 * @param fragments the fragments to use.
+		 * @return a supplier {@link RepositoryFragmentsFunction} returning just {@code fragments}.
+		 */
+		static RepositoryFragmentsFunction just(RepositoryFragments fragments) {
+			return (bf, context) -> fragments;
+		}
+
+	}
+
+	/**
+	 * Creation context for a Repository Fragment.
+	 *
+	 * @since 4.0
+	 */
+	public interface FragmentCreationContext {
+
+		/**
+		 * @return the repository metadata in use.
+		 */
+		RepositoryMetadata getRepositoryMetadata();
+
+		/**
+		 * @return delegate for Value Expression parsing and evaluation.
+		 */
+		ValueExpressionDelegate getValueExpressionDelegate();
+
+		/**
+		 * @return the projection factory to use.
+		 */
+		ProjectionFactory getProjectionFactory();
+
+	}
+
+	private record DefaultFragmentCreationContext(RepositoryMetadata repositoryMetadata,
+			ValueExpressionDelegate valueExpressionDelegate,
+			Supplier<ProjectionFactory> projectionFactory) implements FragmentCreationContext {
+
+		@Override
+		public RepositoryMetadata getRepositoryMetadata() {
+			return repositoryMetadata;
+		}
+
+		@Override
+		public ValueExpressionDelegate getValueExpressionDelegate() {
+			return valueExpressionDelegate();
+		}
+
+		@Override
+		public ProjectionFactory getProjectionFactory() {
+			return projectionFactory().get();
+		}
+
+	}
+
 }

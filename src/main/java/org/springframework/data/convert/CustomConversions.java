@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.GenericTypeResolver;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -38,7 +39,6 @@ import org.springframework.data.mapping.model.SimpleTypeHolder;
 import org.springframework.data.util.CustomCollections;
 import org.springframework.data.util.Predicates;
 import org.springframework.data.util.Streamable;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -137,7 +137,7 @@ public class CustomConversions {
 	/**
 	 * Creates a new {@link CustomConversions} instance registering all given user defined converters and selecting
 	 * {@link Converter converters} from {@link StoreConversions} depending on
-	 * {@link StoreConversions#getSimpleTypeHolder() store simple types} only considering those that either convert
+	 * {@link CustomConversions#getSimpleTypeHolder() store simple types} only considering those that either convert
 	 * to/from a store supported type.
 	 *
 	 * @param storeConversions must not be {@literal null}.
@@ -185,9 +185,36 @@ public class CustomConversions {
 	 */
 	public boolean hasValueConverter(PersistentProperty<?> property) {
 
-		PropertyValueConversions propertyValueConversions = getPropertyValueConversions();
+		PropertyValueConversions pvc = getPropertyValueConversions();
 
-		return propertyValueConversions != null && propertyValueConversions.hasValueConverter(property);
+		return pvc != null && pvc.hasValueConverter(property);
+	}
+
+	/**
+	 * Returns the required {@link PropertyValueConverter} for the given {@link PersistentProperty} or throws
+	 * {@link IllegalStateException} if no converter is available. This is a convenience method for
+	 * {@code getPropertyValueConversions().getValueConverter(…)} enforcing non-null constraints.
+	 * <p>
+	 * Prior to calling this method you should verify a converter is available using
+	 * {@link #hasValueConverter(PersistentProperty)}.
+	 *
+	 * @param property {@link PersistentProperty} to evaluate; must not be {@literal null}.
+	 * @return the required {@link PropertyValueConverter}
+	 * @throws IllegalStateException if no converter is available.
+	 * @since 4.0
+	 * @see #hasValueConverter(PersistentProperty)
+	 */
+	public <DV, SV, P extends PersistentProperty<P>, VCC extends ValueConversionContext<P>> PropertyValueConverter<DV, SV, VCC> getRequiredValueConverter(
+			P property) {
+
+		PropertyValueConversions pvc = getPropertyValueConversions();
+		PropertyValueConverter<DV, SV, VCC> converter = pvc != null ? pvc.getValueConverter(property) : null;
+
+		if (converter == null) {
+			throw new IllegalStateException("No value converter registered for property %s".formatted(property.getName()));
+		}
+
+		return converter;
 	}
 
 	/**
@@ -198,10 +225,6 @@ public class CustomConversions {
 	 * @param type {@link Class} to evaluate as a simple type, such as a primitive type.
 	 * @return a boolean value indicating whether the given, required {@link Class type} is simple.
 	 */
-	// TODO: Technically, an 'isXyz(..)' method (returning a boolean to answer a user's question should not throw an
-	// Exception).
-	// Rather, a null Class type argument should simply return false to indicate it is clearly not a "simple type".
-	// How much data store specific code relies on the existing behavior?
 	public boolean isSimpleType(Class<?> type) {
 
 		Assert.notNull(type, "Type must not be null");
@@ -229,6 +252,7 @@ public class CustomConversions {
 	 * @param candidate must not be {@literal null}.
 	 * @param conversionService must not be {@literal null}.
 	 */
+	@SuppressWarnings("rawtypes")
 	private void registerConverterIn(Object candidate, ConverterRegistry conversionService) {
 
 		if (candidate instanceof Converter converter) {
@@ -252,8 +276,7 @@ public class CustomConversions {
 	 *         data store does not support property value conversions.
 	 * @see PropertyValueConversions
 	 */
-	@Nullable
-	public PropertyValueConversions getPropertyValueConversions() {
+	public @Nullable PropertyValueConversions getPropertyValueConversions() {
 		return propertyValueConversions;
 	}
 
@@ -450,8 +473,7 @@ public class CustomConversions {
 	 * @param targetType must not be {@literal null}.
 	 * @return the actual target type for the given {@code sourceType} and {@code targetType}.
 	 */
-	@Nullable
-	private Class<?> getCustomReadTarget(Class<?> sourceType, Class<?> targetType) {
+	private @Nullable Class<?> getCustomReadTarget(Class<?> sourceType, Class<?> targetType) {
 		return customReadTargetTypes.computeIfAbsent(sourceType, targetType, getReadTarget);
 	}
 
@@ -464,8 +486,7 @@ public class CustomConversions {
 	 * @param pairs must not be {@literal null}.
 	 * @return the base {@link Class type} for the (requested) {@link Class target type} if present.
 	 */
-	@Nullable
-	private Class<?> getCustomTarget(Class<?> sourceType, @Nullable Class<?> targetType,
+	private @Nullable Class<?> getCustomTarget(Class<?> sourceType, @Nullable Class<?> targetType,
 			Collection<ConvertiblePair> pairs) {
 
 		if (targetType != null && pairs.contains(new ConvertiblePair(sourceType, targetType))) {
@@ -508,8 +529,8 @@ public class CustomConversions {
 		 * @param mappingFunction must not be {@literal null}.
 		 * @return the optional target type.
 		 */
-		@Nullable
-		public Class<?> computeIfAbsent(Class<?> sourceType, Function<ConvertiblePair, Class<?>> mappingFunction) {
+		public @Nullable Class<?> computeIfAbsent(Class<?> sourceType,
+				Function<ConvertiblePair, Class<?>> mappingFunction) {
 			return computeIfAbsent(sourceType, AbsentTargetTypeMarker.class, mappingFunction);
 		}
 
@@ -523,8 +544,7 @@ public class CustomConversions {
 		 * @param mappingFunction must not be {@literal null}.
 		 * @return the optional target type.
 		 */
-		@Nullable
-		public Class<?> computeIfAbsent(Class<?> sourceType, Class<?> targetType,
+		public @Nullable Class<?> computeIfAbsent(Class<?> sourceType, Class<?> targetType,
 				Function<ConvertiblePair, Class<?>> mappingFunction) {
 
 			TargetTypes targetTypes = customReadTargetTypes.get(sourceType);
@@ -578,8 +598,8 @@ public class CustomConversions {
 		 * @param mappingFunction must not be {@literal null}.
 		 * @return the optional target type.
 		 */
-		@Nullable
-		public Class<?> computeIfAbsent(Class<?> targetType, Function<ConvertiblePair, Class<?>> mappingFunction) {
+		public @Nullable Class<?> computeIfAbsent(Class<?> targetType,
+				Function<ConvertiblePair, Class<?>> mappingFunction) {
 
 			Class<?> optionalTarget = conversionTargets.get(targetType);
 
@@ -669,7 +689,7 @@ public class CustomConversions {
 			return isConverterOfSource(ConverterOrigin.DEFAULT);
 		}
 
-		public ConverterRegistration getConverterRegistration() {
+		ConverterRegistration getConverterRegistration() {
 			return delegate;
 		}
 
@@ -815,7 +835,7 @@ public class CustomConversions {
 		 * @param converter must not be {@literal null}.
 		 * @return
 		 */
-		public Streamable<ConverterRegistration> getRegistrationsFor(Object converter) {
+		Streamable<ConverterRegistration> getRegistrationsFor(Object converter) {
 
 			Assert.notNull(converter, "Converter must not be null");
 
@@ -930,7 +950,7 @@ public class CustomConversions {
 		private final StoreConversions storeConversions;
 		private final List<?> userConverters;
 		private final Predicate<ConvertiblePair> converterRegistrationFilter;
-		private final PropertyValueConversions propertyValueConversions;
+		private final @Nullable PropertyValueConversions propertyValueConversions;
 
 		/**
 		 * Create a new ConverterConfiguration holding the given {@link StoreConversions} and user defined converters.
@@ -1007,8 +1027,7 @@ public class CustomConversions {
 		 * @return the configured {@link PropertyValueConversions} if set, {@literal null} otherwise.
 		 * @since 2.7
 		 */
-		@Nullable
-		public PropertyValueConversions getPropertyValueConversions() {
+		public @Nullable PropertyValueConversions getPropertyValueConversions() {
 			return this.propertyValueConversions;
 		}
 	}

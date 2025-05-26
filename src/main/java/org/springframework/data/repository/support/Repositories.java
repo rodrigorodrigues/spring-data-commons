@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.repository.core.support.RepositoryFactoryInformation;
+import org.springframework.data.repository.core.support.RepositoryFragmentsContributor;
 import org.springframework.data.repository.query.QueryMethod;
 import org.springframework.data.util.ProxyUtils;
 import org.springframework.util.Assert;
@@ -351,7 +352,7 @@ public class Repositories implements Iterable<Class<?>> {
 	 *
 	 * @author Thomas Darimont
 	 */
-	private static enum EmptyRepositoryFactoryInformation implements RepositoryFactoryInformation<Object, Object> {
+	private enum EmptyRepositoryFactoryInformation implements RepositoryFactoryInformation<Object, Object> {
 
 		INSTANCE;
 
@@ -362,6 +363,11 @@ public class Repositories implements Iterable<Class<?>> {
 
 		@Override
 		public RepositoryInformation getRepositoryInformation() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public RepositoryFragmentsContributor getRepositoryFragmentsContributor() {
 			throw new UnsupportedOperationException();
 		}
 

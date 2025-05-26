@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,13 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.data.mapping.Alias;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -106,9 +107,8 @@ public class DefaultTypeMapper<S> implements TypeMapper<S>, BeanClassLoaderAware
 		};
 	}
 
-	@Nullable
 	@Override
-	public TypeInformation<?> readType(S source) {
+	public @Nullable TypeInformation<?> readType(S source) {
 
 		Assert.notNull(source, "Source object must not be null");
 
@@ -122,8 +122,7 @@ public class DefaultTypeMapper<S> implements TypeMapper<S>, BeanClassLoaderAware
 	 * @param alias
 	 * @return
 	 */
-	@Nullable
-	private TypeInformation<?> getFromCacheOrCreate(Alias alias) {
+	private @Nullable TypeInformation<?> getFromCacheOrCreate(Alias alias) {
 		return typeCache.computeIfAbsent(alias, getAlias).orElse(null);
 	}
 
@@ -141,8 +140,8 @@ public class DefaultTypeMapper<S> implements TypeMapper<S>, BeanClassLoaderAware
 
 		Class<T> rawType = basicType.getType();
 
-		boolean isMoreConcreteCustomType = (rawType == null)
-				|| (rawType.isAssignableFrom(documentsTargetType) && !rawType.equals(documentsTargetType));
+		boolean isMoreConcreteCustomType = (rawType.isAssignableFrom(documentsTargetType)
+				&& !rawType.equals(documentsTargetType));
 
 		if (!isMoreConcreteCustomType) {
 			return basicType;
@@ -160,13 +159,11 @@ public class DefaultTypeMapper<S> implements TypeMapper<S>, BeanClassLoaderAware
 	 * @param source
 	 * @return
 	 */
-	@Nullable
-	private Class<?> getDefaultedTypeToBeUsed(S source) {
+	private @Nullable Class<?> getDefaultedTypeToBeUsed(S source) {
 
-		TypeInformation<?> documentsTargetTypeInformation = readType(source);
-		documentsTargetTypeInformation = documentsTargetTypeInformation == null ? getFallbackTypeFor(source)
-				: documentsTargetTypeInformation;
-		return documentsTargetTypeInformation == null ? null : documentsTargetTypeInformation.getType();
+		TypeInformation<?> type = readType(source);
+		type = type == null ? getFallbackTypeFor(source) : type;
+		return type == null ? null : type.getType();
 	}
 
 	/**
@@ -175,8 +172,7 @@ public class DefaultTypeMapper<S> implements TypeMapper<S>, BeanClassLoaderAware
 	 * @param source will never be {@literal null}.
 	 * @return
 	 */
-	@Nullable
-	protected TypeInformation<?> getFallbackTypeFor(S source) {
+	protected @Nullable TypeInformation<?> getFallbackTypeFor(S source) {
 		return null;
 	}
 
@@ -192,7 +188,7 @@ public class DefaultTypeMapper<S> implements TypeMapper<S>, BeanClassLoaderAware
 
 		Alias alias = getAliasFor(info);
 		if (alias.isPresent()) {
-			accessor.writeTypeTo(sink, alias.getValue());
+			accessor.writeTypeTo(sink, alias.getRequiredValue());
 		}
 	}
 

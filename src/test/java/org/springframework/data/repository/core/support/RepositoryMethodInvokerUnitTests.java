@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 the original author or authors.
+ * Copyright 2020-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.data.Percentage;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,7 +54,6 @@ import org.springframework.data.repository.core.support.RepositoryMethodInvocati
 import org.springframework.data.repository.core.support.RepositoryMethodInvocationListener.RepositoryMethodInvocationResult.State;
 import org.springframework.data.repository.query.RepositoryQuery;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
-import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ReflectionUtils;
 

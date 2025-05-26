@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,11 +27,14 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.asm.ClassWriter;
 import org.springframework.asm.MethodVisitor;
 import org.springframework.asm.Opcodes;
 import org.springframework.asm.Type;
 import org.springframework.beans.BeanInstantiationException;
+import org.springframework.beans.BeanUtils;
 import org.springframework.cglib.core.ReflectUtils;
 import org.springframework.core.NativeDetector;
 import org.springframework.data.mapping.FactoryMethod;
@@ -41,7 +44,6 @@ import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.PreferredConstructor;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
@@ -159,8 +161,7 @@ class ClassGeneratingEntityInstantiator implements EntityInstantiator {
 	 * @return
 	 */
 	protected EntityInstantiator doCreateEntityInstantiator(PersistentEntity<?, ?> entity) {
-		return new EntityInstantiatorAdapter(
-				createObjectInstantiator(entity, entity.getInstanceCreatorMetadata()));
+		return new EntityInstantiatorAdapter(createObjectInstantiator(entity, entity.getInstanceCreatorMetadata()));
 	}
 
 	/**
@@ -239,7 +240,8 @@ class ClassGeneratingEntityInstantiator implements EntityInstantiator {
 			@Nullable InstanceCreatorMetadata<?> constructor) {
 
 		try {
-			return (ObjectInstantiator) this.generator.generateCustomInstantiatorClass(entity, constructor).newInstance();
+			Class<?> instantiatorClass = this.generator.generateCustomInstantiatorClass(entity, constructor);
+			return (ObjectInstantiator) BeanUtils.instantiateClass(instantiatorClass);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -482,8 +484,7 @@ class ClassGeneratingEntityInstantiator implements EntityInstantiator {
 			String entityTypeResourcePath = Type.getInternalName(entity.getType());
 
 			MethodVisitor mv = cw.visitMethod(ACC_PUBLIC + ACC_VARARGS, CREATE_METHOD_NAME,
-					"([" + BytecodeUtil.referenceName(Object.class) + ")" + BytecodeUtil.referenceName(Object.class),
-					null, null);
+					"([" + BytecodeUtil.referenceName(Object.class) + ")" + BytecodeUtil.referenceName(Object.class), null, null);
 			mv.visitCode();
 			mv.visitTypeInsn(NEW, entityTypeResourcePath);
 			mv.visitInsn(DUP);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,13 @@
  */
 package org.springframework.data.repository.init;
 
+import java.io.Serial;
+
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.data.repository.support.Repositories;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -29,7 +32,7 @@ import org.springframework.util.Assert;
  */
 public class RepositoriesPopulatedEvent extends ApplicationEvent {
 
-	private static final long serialVersionUID = 7449982118828889097L;
+	private static final @Serial long serialVersionUID = 7449982118828889097L;
 
 	private final Repositories repositories;
 

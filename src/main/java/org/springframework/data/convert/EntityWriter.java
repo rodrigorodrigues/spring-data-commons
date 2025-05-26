@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,5 +24,11 @@ package org.springframework.data.convert;
  */
 public interface EntityWriter<T, S> {
 
+	/**
+	 * Writes the given source object into a store specific sink.
+	 *
+	 * @param source the source to create an object of the given type from.
+	 * @param sink the sink to write into.
+	 */
 	void write(T source, S sink);
 }

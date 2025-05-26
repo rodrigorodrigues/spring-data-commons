@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,12 @@ package org.springframework.data.repository.config;
 
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.data.repository.query.QueryLookupStrategy;
 import org.springframework.data.util.Streamable;
-import org.springframework.lang.Nullable;
 
 /**
  * Configuration information for a single repository instance.
@@ -76,6 +77,15 @@ public interface RepositoryConfiguration<T extends RepositoryConfigurationSource
 	 * @since 1.11
 	 */
 	Optional<String> getRepositoryBaseClassName();
+
+	/**
+	 * Returns the name of the repository fragments contributor class to be used or {@link Optional#empty()} if the store
+	 * specific defaults shall be applied.
+	 *
+	 * @return
+	 * @since 4.0
+	 */
+	Optional<String> getRepositoryFragmentsContributorClassName();
 
 	/**
 	 * Returns the name of the repository factory bean class to be used.
@@ -156,11 +166,12 @@ public interface RepositoryConfiguration<T extends RepositoryConfigurationSource
 	ImplementationLookupConfiguration toLookupConfiguration(MetadataReaderFactory factory);
 
 	/**
-	 * Returns a human readable description of the repository interface declaration for error reporting purposes.
+	 * Returns a human-readable description of the repository interface declaration for error reporting purposes.
 	 *
 	 * @return can be {@literal null}.
 	 * @since 2.3
 	 */
 	@Nullable
 	String getResourceDescription();
+
 }

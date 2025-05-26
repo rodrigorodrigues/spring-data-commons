@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.springframework.data.projection;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,13 +26,15 @@ import java.util.Map.Entry;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.CollectionFactory;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.data.util.NullableWrapper;
 import org.springframework.data.util.NullableWrapperConverters;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
@@ -44,6 +47,7 @@ import org.springframework.util.ObjectUtils;
  * @author Mark Paluch
  * @author Christoph Strobl
  * @author Johannes Englmeier
+ * @author Yanming Zhou
  * @since 1.10
  */
 class ProjectingMethodInterceptor implements MethodInterceptor {
@@ -60,15 +64,16 @@ class ProjectingMethodInterceptor implements MethodInterceptor {
 		this.conversionService = conversionService;
 	}
 
-	@Nullable
 	@Override
-	public Object invoke(@SuppressWarnings("null") @NonNull MethodInvocation invocation) throws Throwable {
+	public @Nullable Object invoke(@SuppressWarnings("null") @NonNull MethodInvocation invocation) throws Throwable {
 
-		TypeInformation<?> type = TypeInformation.fromReturnTypeOf(invocation.getMethod());
+		Method method = invocation.getMethod();
+		TypeInformation<?> type = TypeInformation.fromReturnTypeOf(method);
 		TypeInformation<?> resultType = type;
 		TypeInformation<?> typeToReturn = type;
 
 		Object result = delegate.invoke(invocation);
+
 		boolean applyWrapper = false;
 
 		if (NullableWrapperConverters.supports(type.getType())
@@ -86,8 +91,7 @@ class ProjectingMethodInterceptor implements MethodInterceptor {
 		return result;
 	}
 
-	@Nullable
-	protected Object potentiallyConvertResult(TypeInformation<?> type, @Nullable Object result) {
+	protected @Nullable Object potentiallyConvertResult(TypeInformation<?> type, @Nullable Object result) {
 
 		if (result == null) {
 			return null;
@@ -157,8 +161,8 @@ class ProjectingMethodInterceptor implements MethodInterceptor {
 		return result;
 	}
 
-	@Nullable
-	private Object getProjection(@Nullable Object result, Class<?> returnType) {
+	@Contract("null, _ -> null")
+	private @Nullable Object getProjection(@Nullable Object result, Class<?> returnType) {
 		return (result == null) || ClassUtils.isAssignable(returnType, result.getClass()) ? result
 				: factory.createProjection(returnType, result);
 	}

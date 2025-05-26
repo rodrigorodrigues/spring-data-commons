@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.data.mapping.Alias;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -48,9 +49,8 @@ public class SimpleTypeInformationMapper implements TypeInformationMapper, BeanC
 	 * @return the type to be used for the given {@link String} representation or {@literal null} if nothing found or the
 	 *         class cannot be loaded.
 	 */
-	@Nullable
 	@Override
-	public TypeInformation<?> resolveTypeFrom(Alias alias) {
+	public @Nullable TypeInformation<?> resolveTypeFrom(Alias alias) {
 
 		String stringAlias = alias.mapTyped(String.class);
 

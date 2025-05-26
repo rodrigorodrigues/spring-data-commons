@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024 the original author or authors.
+ * Copyright 2013-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ public abstract class AuditingBeanDefinitionRegistrarSupport implements ImportBe
 	 *
 	 * @param configuration must not be {@literal null}.
 	 * @param registry must not be {@literal null}.
-	 * @return
+	 * @return the {@link AbstractBeanDefinition} for the {@link AuditingConfiguration}.
 	 */
 	protected AbstractBeanDefinition registerAuditHandlerBeanDefinition(AuditingConfiguration configuration,
 			BeanDefinitionRegistry registry) {
@@ -96,7 +96,7 @@ public abstract class AuditingBeanDefinitionRegistrarSupport implements ImportBe
 	 * implementations.
 	 *
 	 * @param configuration must not be {@literal null}.
-	 * @return
+	 * @return the {@link BeanDefinitionBuilder} for the {@link AuditingConfiguration}.
 	 */
 	protected BeanDefinitionBuilder getAuditHandlerBeanDefinitionBuilder(AuditingConfiguration configuration) {
 
@@ -142,7 +142,7 @@ public abstract class AuditingBeanDefinitionRegistrarSupport implements ImportBe
 	 * Retrieve auditing configuration from the given {@link AnnotationMetadata}.
 	 *
 	 * @param annotationMetadata will never be {@literal null}.
-	 * @return
+	 * @return a new {@link AnnotationAuditingConfiguration}.
 	 */
 	protected AuditingConfiguration getConfiguration(AnnotationMetadata annotationMetadata) {
 		return new AnnotationAuditingConfiguration(annotationMetadata, getAnnotation());
@@ -167,7 +167,7 @@ public abstract class AuditingBeanDefinitionRegistrarSupport implements ImportBe
 	/**
 	 * Return the name to be used to register the {@link AuditingHandler} under.
 	 *
-	 * @return
+	 * @return name of the {@link AuditingHandler} bean.
 	 */
 	protected abstract String getAuditingHandlerBeanName();
 

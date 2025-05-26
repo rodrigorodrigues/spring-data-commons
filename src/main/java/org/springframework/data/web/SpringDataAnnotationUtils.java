@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024 the original author or authors.
+ * Copyright 2013-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,13 @@ import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.MethodParameter;
-import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.data.domain.Pageable;
-import org.springframework.lang.Nullable;
-import org.springframework.util.ObjectUtils;
 
 /**
  * Helper class to ease sharing code between legacy {@link PageableHandlerMethodArgumentResolverSupport} and
@@ -85,41 +84,13 @@ abstract class SpringDataAnnotationUtils {
 	}
 
 	/**
-	 * Returns the value of the given specific property of the given annotation. If the value of that property is the
-	 * properties default, we fall back to the value of the {@code value} attribute.
-	 *
-	 * @param annotation must not be {@literal null}.
-	 * @param property must not be {@literal null} or empty.
-	 * @return
-	 * @deprecated since 3.0 as this method is no longer used within the Framework.
-	 */
-	@SuppressWarnings("unchecked")
-	@Deprecated
-	public static <T> T getSpecificPropertyOrDefaultFromValue(Annotation annotation, String property) {
-
-		Object propertyDefaultValue = AnnotationUtils.getDefaultValue(annotation, property);
-		Object propertyValue = AnnotationUtils.getValue(annotation, property);
-
-		Object result = ObjectUtils.nullSafeEquals(propertyDefaultValue, propertyValue) //
-				? AnnotationUtils.getValue(annotation) //
-				: propertyValue;
-
-		if (result == null) {
-			throw new IllegalStateException("Exepected to be able to look up an annotation property value but failed");
-		}
-
-		return (T) result;
-	}
-
-	/**
 	 * Determine a qualifier value for a {@link MethodParameter}.
 	 *
 	 * @param parameter must not be {@literal null}.
 	 * @return the qualifier value if {@code @Qualifier} is present.
 	 * @since 2.5
 	 */
-	@Nullable
-	public static String getQualifier(@Nullable MethodParameter parameter) {
+	public static @Nullable String getQualifier(@Nullable MethodParameter parameter) {
 
 		if (parameter == null) {
 			return null;
@@ -169,8 +140,7 @@ abstract class SpringDataAnnotationUtils {
 	 * @param annotations must not be {@literal null}.
 	 * @return
 	 */
-	@Nullable
-	private static Qualifier findAnnotation(Annotation[] annotations) {
+	private static @Nullable Qualifier findAnnotation(Annotation[] annotations) {
 
 		for (Annotation annotation : annotations) {
 			if (annotation instanceof Qualifier q) {

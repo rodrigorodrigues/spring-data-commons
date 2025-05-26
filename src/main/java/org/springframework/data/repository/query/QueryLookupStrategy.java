@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,11 @@ package org.springframework.data.repository.query;
 import java.lang.reflect.Method;
 import java.util.Locale;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.repository.core.NamedQueries;
 import org.springframework.data.repository.core.RepositoryMetadata;
-import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
 /**
@@ -41,8 +42,7 @@ public interface QueryLookupStrategy {
 		 * @param xml
 		 * @return a strategy key from the given XML value
 		 */
-		@Nullable
-		public static Key create(String xml) {
+		public static @Nullable Key create(String xml) {
 
 			if (!StringUtils.hasText(xml)) {
 				return null;

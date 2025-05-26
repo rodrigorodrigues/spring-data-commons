@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,12 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.EnvironmentCapable;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.data.annotation.Immutable;
 import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.domain.Persistable;
@@ -44,7 +48,6 @@ import org.springframework.data.support.PersistableIsNewStrategy;
 import org.springframework.data.util.Lazy;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.expression.EvaluationContext;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.MultiValueMap;
@@ -61,7 +64,8 @@ import org.springframework.util.StringUtils;
  * @author Mark Paluch
  * @author Johannes Englmeier
  */
-public class BasicPersistentEntity<T, P extends PersistentProperty<P>> implements MutablePersistentEntity<T, P> {
+public class BasicPersistentEntity<T, P extends PersistentProperty<P>>
+		implements MutablePersistentEntity<T, P>, EnvironmentCapable {
 
 	private static final String TYPE_MISMATCH = "Target bean of type %s is not of type of the persistent entity (%s)";
 
@@ -117,8 +121,7 @@ public class BasicPersistentEntity<T, P extends PersistentProperty<P>> implement
 
 		this.propertyCache = new HashMap<>(16, 1.0f);
 		this.annotationCache = new ConcurrentHashMap<>(16);
-		this.propertyAnnotationCache = CollectionUtils
-				.toMultiValueMap(new ConcurrentHashMap<>(16));
+		this.propertyAnnotationCache = CollectionUtils.toMultiValueMap(new ConcurrentHashMap<>(16));
 		this.propertyAccessorFactory = BeanWrapperPropertyAccessorFactory.INSTANCE;
 		this.typeAlias = Lazy.of(() -> getAliasFromAnnotation(getType()));
 		this.isNewStrategy = Lazy.of(() -> Persistable.class.isAssignableFrom(information.getType()) //
@@ -128,13 +131,6 @@ public class BasicPersistentEntity<T, P extends PersistentProperty<P>> implement
 		this.isImmutable = Lazy.of(() -> isAnnotationPresent(Immutable.class));
 		this.requiresPropertyPopulation = Lazy.of(() -> !isImmutable() && properties.stream() //
 				.anyMatch(it -> !(isCreatorArgument(it) || it.isTransient())));
-	}
-
-	@Nullable
-	@Override
-	@SuppressWarnings("unchecked")
-	public PreferredConstructor<T, P> getPersistenceConstructor() {
-		return creator instanceof PreferredConstructor ? (PreferredConstructor<T, P>) creator : null;
 	}
 
 	@Nullable
@@ -237,14 +233,23 @@ public class BasicPersistentEntity<T, P extends PersistentProperty<P>> implement
 		this.environment = environment;
 	}
 
+	@Override
+	public Environment getEnvironment() {
+
+		if (this.environment == null) {
+			this.environment = new StandardEnvironment();
+		}
+
+		return this.environment;
+	}
+
 	/**
 	 * Returns the given property if it is a better candidate for the id property than the current id property.
 	 *
 	 * @param property the new id property candidate, will never be {@literal null}.
 	 * @return the given id property or {@literal null} if the given property is not an id property.
 	 */
-	@Nullable
-	protected P returnPropertyIfBetterIdPropertyCandidateOrNull(P property) {
+	protected @Nullable P returnPropertyIfBetterIdPropertyCandidateOrNull(P property) {
 
 		if (!property.isIdProperty()) {
 			return null;
@@ -452,7 +457,7 @@ public class BasicPersistentEntity<T, P extends PersistentProperty<P>> implement
 	 * @return the evaluation context including all potential extensions.
 	 * @since 2.1
 	 */
-	protected EvaluationContext getEvaluationContext(Object rootObject) {
+	protected EvaluationContext getEvaluationContext(@Nullable Object rootObject) {
 		return evaluationContextProvider.getEvaluationContext(rootObject);
 	}
 
@@ -464,7 +469,7 @@ public class BasicPersistentEntity<T, P extends PersistentProperty<P>> implement
 	 * @return the evaluation context with extensions loaded that satisfy {@link ExpressionDependencies}.
 	 * @since 2.5
 	 */
-	protected EvaluationContext getEvaluationContext(Object rootObject, ExpressionDependencies dependencies) {
+	protected EvaluationContext getEvaluationContext(@Nullable Object rootObject, ExpressionDependencies dependencies) {
 		return evaluationContextProvider.getEvaluationContext(rootObject, dependencies);
 	}
 
@@ -475,8 +480,8 @@ public class BasicPersistentEntity<T, P extends PersistentProperty<P>> implement
 	 * @return the evaluation context including all potential extensions.
 	 * @since 3.3
 	 */
-	protected ValueEvaluationContext getValueEvaluationContext(Object rootObject) {
-		return ValueEvaluationContext.of(this.environment, getEvaluationContext(rootObject));
+	protected ValueEvaluationContext getValueEvaluationContext(@Nullable Object rootObject) {
+		return ValueEvaluationContext.of(getEnvironment(), getEvaluationContext(rootObject));
 	}
 
 	/**
@@ -487,8 +492,9 @@ public class BasicPersistentEntity<T, P extends PersistentProperty<P>> implement
 	 * @return the evaluation context with extensions loaded that satisfy {@link ExpressionDependencies}.
 	 * @since 3.3
 	 */
-	protected ValueEvaluationContext getValueEvaluationContext(Object rootObject, ExpressionDependencies dependencies) {
-		return ValueEvaluationContext.of(this.environment, getEvaluationContext(rootObject, dependencies));
+	protected ValueEvaluationContext getValueEvaluationContext(@Nullable Object rootObject,
+			ExpressionDependencies dependencies) {
+		return ValueEvaluationContext.of(getEnvironment(), getEvaluationContext(rootObject, dependencies));
 	}
 
 	/**
@@ -556,15 +562,8 @@ public class BasicPersistentEntity<T, P extends PersistentProperty<P>> implement
 	 *
 	 * @author Oliver Gierke
 	 */
-	private static final class AssociationComparator<P extends PersistentProperty<P>>
-			implements Comparator<Association<P>>, Serializable {
-
-		private static final long serialVersionUID = 4508054194886854513L;
-		private final Comparator<P> delegate;
-
-		AssociationComparator(Comparator<P> delegate) {
-			this.delegate = delegate;
-		}
+	private record AssociationComparator<P extends PersistentProperty<P>>(
+			Comparator<P> delegate) implements Comparator<Association<P>>, Serializable {
 
 		@Override
 		public int compare(@Nullable Association<P> left, @Nullable Association<P> right) {

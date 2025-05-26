@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,9 +91,25 @@ public interface RepositoryMetadata {
 	 *
 	 * @param method
 	 * @return
+	 * @see #getReturnedDomainTypeInformation(Method)
 	 * @see #getReturnType(Method)
 	 */
 	Class<?> getReturnedDomainClass(Method method);
+
+	/**
+	 * Returns the domain type information returned by the given {@link Method}. In contrast to
+	 * {@link #getReturnType(Method)}, this method extracts the type from {@link Collection}s and
+	 * {@link org.springframework.data.domain.Page} as well.
+	 *
+	 * @param method
+	 * @return
+	 * @see #getReturnedDomainClass(Method)
+	 * @see #getReturnType(Method)
+	 * @since 4.0
+	 */
+	default TypeInformation<?> getReturnedDomainTypeInformation(Method method) {
+		return TypeInformation.of(getReturnedDomainClass(method));
+	}
 
 	/**
 	 * Returns {@link CrudMethods} meta information for the repository.

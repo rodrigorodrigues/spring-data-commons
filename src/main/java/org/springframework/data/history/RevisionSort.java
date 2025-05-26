@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024 the original author or authors.
+ * Copyright 2016-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package org.springframework.data.history;
 
+import java.io.Serial;
 import java.util.Arrays;
 
 import org.springframework.data.domain.Sort;
@@ -30,7 +31,7 @@ import org.springframework.util.Assert;
  */
 public class RevisionSort extends Sort {
 
-	private static final long serialVersionUID = 618238321589063537L;
+	private static final @Serial long serialVersionUID = 618238321589063537L;
 
 	private static final String PROPERTY = "__revisionNumber__";
 	private static final RevisionSort ASC = new RevisionSort(Direction.ASC);

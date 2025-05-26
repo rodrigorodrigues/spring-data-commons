@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,11 @@
  */
 package org.springframework.data.repository.core.support;
 
+import java.io.Serial;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.factory.BeanFactory;
@@ -25,7 +28,6 @@ import org.springframework.core.BridgeMethodResolver;
 import org.springframework.dao.support.PersistenceExceptionTranslationInterceptor;
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.util.ProxyUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 import org.springframework.transaction.interceptor.TransactionAttribute;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
@@ -80,7 +82,7 @@ class TransactionalRepositoryProxyPostProcessor implements RepositoryProxyPostPr
 	}
 
 	/**
-	 * Custom implementation of {@link AnnotationTransactionAttributeSource} that that slightly modify the algorithm
+	 * Custom implementation of {@link AnnotationTransactionAttributeSource} that slightly modify the algorithm
 	 * transaction configuration is discovered.
 	 * <p>
 	 * The original Spring implementation favors the implementation class' transaction configuration over one declared at
@@ -93,14 +95,14 @@ class TransactionalRepositoryProxyPostProcessor implements RepositoryProxyPostPr
 	 */
 	static class RepositoryAnnotationTransactionAttributeSource extends AnnotationTransactionAttributeSource {
 
-		private static final long serialVersionUID = 7229616838812819438L;
+		private static final @Serial long serialVersionUID = 7229616838812819438L;
 
 		private final RepositoryInformation repositoryInformation;
 		private final boolean enableDefaultTransactions;
 
 		/**
 		 * Create a default CustomAnnotationTransactionAttributeSource, supporting public methods that carry the
-		 * {@code Transactional} annotation or the EJB3 {@link javax.ejb.TransactionAttribute} annotation.
+		 * {@code Transactional} annotation or the EJB3 {@code  javax.ejb.TransactionAttribute} annotation.
 		 */
 		public RepositoryAnnotationTransactionAttributeSource(RepositoryInformation repositoryInformation,
 				boolean enableDefaultTransactions) {
@@ -114,8 +116,8 @@ class TransactionalRepositoryProxyPostProcessor implements RepositoryProxyPostPr
 		}
 
 		@Override
-		@Nullable
-		protected TransactionAttribute computeTransactionAttribute(Method method, @Nullable Class<?> targetClass) {
+		protected @Nullable TransactionAttribute computeTransactionAttribute(Method method,
+				@Nullable Class<?> targetClass) {
 
 			// Don't allow no-public methods as required.
 			if (allowPublicMethodsOnly() && !Modifier.isPublic(method.getModifiers())) {

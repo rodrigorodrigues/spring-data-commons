@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanNameGenerator;
@@ -37,8 +40,6 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.data.config.ConfigurationUtils;
 import org.springframework.data.util.Streamable;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
@@ -64,6 +65,7 @@ public class AnnotationRepositoryConfigurationSource extends RepositoryConfigura
 	private static final String QUERY_LOOKUP_STRATEGY = "queryLookupStrategy";
 	private static final String REPOSITORY_FACTORY_BEAN_CLASS = "repositoryFactoryBeanClass";
 	private static final String REPOSITORY_BASE_CLASS = "repositoryBaseClass";
+	private static final String REPOSITORY_FRAGMENTS_CONTRIBUTOR_CLASS = "fragmentsContributor";
 	private static final String CONSIDER_NESTED_REPOSITORIES = "considerNestedRepositories";
 	private static final String BOOTSTRAP_MODE = "bootstrapMode";
 	private static final String BEAN_NAME_GENERATOR = "nameGenerator";
@@ -75,23 +77,6 @@ public class AnnotationRepositoryConfigurationSource extends RepositoryConfigura
 	private final AnnotationAttributes attributes;
 	private final Function<AnnotationAttributes, Stream<TypeFilter>> typeFilterFunction;
 	private final boolean hasExplicitFilters;
-
-	/**
-	 * Creates a new {@link AnnotationRepositoryConfigurationSource} from the given {@link AnnotationMetadata} and
-	 * annotation.
-	 *
-	 * @param metadata must not be {@literal null}.
-	 * @param annotation must not be {@literal null}.
-	 * @param resourceLoader must not be {@literal null}.
-	 * @param environment must not be {@literal null}.
-	 * @param registry must not be {@literal null}.
-	 * @deprecated since 2.2. Prefer to use overload taking a {@link BeanNameGenerator} additionally.
-	 */
-	@Deprecated(since = "2.2")
-	public AnnotationRepositoryConfigurationSource(AnnotationMetadata metadata, Class<? extends Annotation> annotation,
-			ResourceLoader resourceLoader, Environment environment, BeanDefinitionRegistry registry) {
-		this(metadata, annotation, resourceLoader, environment, registry, null);
-	}
 
 	/**
 	 * Creates a new {@link AnnotationRepositoryConfigurationSource} from the given {@link AnnotationMetadata} and
@@ -201,6 +186,16 @@ public class AnnotationRepositoryConfigurationSource extends RepositoryConfigura
 		Class<?> repositoryBaseClass = attributes.getClass(REPOSITORY_BASE_CLASS);
 		return DefaultRepositoryBaseClass.class.equals(repositoryBaseClass) ? Optional.empty()
 				: Optional.of(repositoryBaseClass.getName());
+	}
+
+	@Override
+	public Optional<String> getRepositoryFragmentsContributorClassName() {
+
+		if (!attributes.containsKey(REPOSITORY_FRAGMENTS_CONTRIBUTOR_CLASS)) {
+			return Optional.empty();
+		}
+
+		return Optional.of(attributes.getClass(REPOSITORY_FRAGMENTS_CONTRIBUTOR_CLASS).getName());
 	}
 
 	/**
@@ -350,9 +345,8 @@ public class AnnotationRepositoryConfigurationSource extends RepositoryConfigura
 	 *          configured as String instead of a Class instance.
 	 * @return the bean name generator or {@literal null} if not configured.
 	 */
-	@Nullable
 	@SuppressWarnings("unchecked")
-	private static BeanNameGenerator getConfiguredBeanNameGenerator(AnnotationMetadata metadata,
+	private static @Nullable BeanNameGenerator getConfiguredBeanNameGenerator(AnnotationMetadata metadata,
 		Class<? extends Annotation> annotation, ClassLoader beanClassLoader) {
 
 		Map<String, Object> annotationAttributes = metadata.getAnnotationAttributes(annotation.getName());

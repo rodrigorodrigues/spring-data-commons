@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
  */
 package org.springframework.data.mapping;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.util.Streamable;
-import org.springframework.lang.Nullable;
 
 /**
  * Abstraction of a path of {@link PersistentProperty}s.
@@ -69,19 +70,6 @@ public interface PersistentPropertyPath<P extends PersistentProperty<P>> extends
 	 * @return will never be {@literal null}.
 	 */
 	P getLeafProperty();
-
-	/**
-	 * Returns the last property in the {@link PersistentPropertyPath}. So for {@code foo.bar} it will return the
-	 * {@link PersistentProperty} for {@code bar}. For a simple {@code foo} it returns {@link PersistentProperty} for
-	 * {@code foo}.
-	 *
-	 * @return will never be {@literal null}.
-	 * @deprecated use {@link #getLeafProperty()} instead.
-	 */
-	@Deprecated(since = "3.1", forRemoval = true)
-	default P getRequiredLeafProperty() {
-		return getLeafProperty();
-	}
 
 	/**
 	 * Returns the first property in the {@link PersistentPropertyPath}. So for {@code foo.bar} it will return the

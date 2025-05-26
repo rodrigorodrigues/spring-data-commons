@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2024 the original author or authors.
+ * Copyright 2017-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,10 @@ package org.springframework.data.web;
 
 import java.util.List;
 
+import org.jspecify.annotations.NonNull;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.data.domain.Sort;
-import org.springframework.lang.NonNull;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.BindingContext;
 import org.springframework.web.reactive.result.method.HandlerMethodArgumentResolver;

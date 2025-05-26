@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024 the original author or authors.
+ * Copyright 2016-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+
 import org.springframework.aop.framework.Advised;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.beans.factory.ListableBeanFactory;
@@ -44,7 +45,6 @@ import org.springframework.core.ResolvableType;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.metrics.ApplicationStartup;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.core.type.StandardAnnotationMetadata;
 import org.springframework.data.mapping.Person;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.config.RepositoryConfigurationDelegate.LazyRepositoryInjectionPointResolver;
@@ -64,6 +64,7 @@ import org.springframework.data.repository.sample.ProductRepository;
  *
  * @author Oliver Gierke
  * @author Mark Paluch
+ * @author xeounxzxu
  * @soundtrack Richard Spaven - Tribute (Whole Other*)
  */
 @ExtendWith(MockitoExtension.class)
@@ -79,7 +80,7 @@ class RepositoryConfigurationDelegateUnitTests {
 		var context = new GenericApplicationContext();
 
 		RepositoryConfigurationSource configSource = new AnnotationRepositoryConfigurationSource(
-				new StandardAnnotationMetadata(TestConfig.class, true), EnableRepositories.class, context, environment,
+				AnnotationMetadata.introspect(TestConfig.class), EnableRepositories.class, context, environment,
 				context.getDefaultListableBeanFactory(), null);
 
 		var delegate = new RepositoryConfigurationDelegate(configSource, context, environment);
@@ -109,7 +110,16 @@ class RepositoryConfigurationDelegateUnitTests {
 		var beanFactory = assertLazyRepositoryBeanSetup(DeferredConfig.class);
 
 		assertThat(beanFactory.getBeanNamesForType(DeferredRepositoryInitializationListener.class)).isNotEmpty();
+	}
 
+	@Test // GH-3287
+	void registersOneDeferredRepositoryInitializationListener() {
+
+		var beanFactory = assertLazyRepositoryBeanSetup(DeferredConfig.class, OtherDeferredConfig.class);
+
+		assertThat(beanFactory.getBeanNamesForType(DeferredRepositoryInitializationListener.class)).isNotEmpty();
+		assertThat(beanFactory.getBeanNamesForType(AddressRepository.class)).isNotEmpty();
+		assertThat(beanFactory.getBeanNamesForType(ProductRepository.class)).isNotEmpty();
 	}
 
 	@Test // DATACMNS-1832
@@ -122,7 +132,7 @@ class RepositoryConfigurationDelegateUnitTests {
 		context.setApplicationStartup(startup);
 
 		RepositoryConfigurationSource configSource = new AnnotationRepositoryConfigurationSource(
-				new StandardAnnotationMetadata(TestConfig.class, true), EnableRepositories.class, context, environment,
+				AnnotationMetadata.introspect(TestConfig.class), EnableRepositories.class, context, environment,
 				context.getDefaultListableBeanFactory(), null);
 
 		var delegate = new RepositoryConfigurationDelegate(configSource, context, environment);
@@ -276,9 +286,9 @@ class RepositoryConfigurationDelegateUnitTests {
 		assertThat(it.getGeneric(1).resolve()).isEqualTo(Person.class);
 	}
 
-	private static ListableBeanFactory assertLazyRepositoryBeanSetup(Class<?> configClass) {
+	private static ListableBeanFactory assertLazyRepositoryBeanSetup(Class<?>... componentClasses) {
 
-		var context = new AnnotationConfigApplicationContext(configClass);
+		var context = new AnnotationConfigApplicationContext(componentClasses);
 
 		assertThat(context.getDefaultListableBeanFactory().getAutowireCandidateResolver())
 				.isInstanceOf(LazyRepositoryInjectionPointResolver.class);
@@ -308,6 +318,12 @@ class RepositoryConfigurationDelegateUnitTests {
 			includeFilters = @Filter(type = FilterType.ASSIGNABLE_TYPE, classes = AddressRepository.class),
 			bootstrapMode = BootstrapMode.DEFERRED)
 	static class DeferredConfig {}
+
+	@ComponentScan(basePackageClasses = ProductRepository.class)
+	@EnableRepositories(basePackageClasses = ProductRepository.class,
+			includeFilters = @Filter(type = FilterType.ASSIGNABLE_TYPE, classes = AddressRepository.class),
+			bootstrapMode = BootstrapMode.DEFERRED)
+	static class OtherDeferredConfig {}
 
 	@EnableRepositories(basePackageClasses = MyOtherRepository.class,
 			includeFilters = @Filter(type = FilterType.ASSIGNABLE_TYPE, classes = MyOtherRepository.class),

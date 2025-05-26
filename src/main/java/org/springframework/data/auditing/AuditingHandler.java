@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,9 +104,10 @@ public class AuditingHandler extends AuditingHandlerSupport implements Initializ
 				.orElse(Auditor.none());
 	}
 
+	@Override
 	public void afterPropertiesSet() {
 
-		if (!auditorAware.isPresent()) {
+		if (auditorAware.isEmpty()) {
 			logger.debug("No AuditorAware set; Auditing will not be applied");
 		}
 	}

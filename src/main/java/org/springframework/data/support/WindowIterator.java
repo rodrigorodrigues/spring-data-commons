@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 the original author or authors.
+ * Copyright 2023-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,11 @@ import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.KeysetScrollPosition;
 import org.springframework.data.domain.ScrollPosition;
 import org.springframework.data.domain.Window;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -82,26 +83,20 @@ public class WindowIterator<T> implements Iterator<T> {
 			}
 
 			if (currentIterator == null) {
-				if (currentWindow != null) {
-					currentIterator = isBackwardsScrolling(currentPosition)
-							? new ReverseListIterator<>(currentWindow.getContent())
-							: currentWindow.iterator();
-				}
+				currentIterator = isBackwardsScrolling(currentPosition) ? new ReverseListIterator<>(currentWindow.getContent())
+						: currentWindow.iterator();
 			}
 
-			if (currentIterator != null) {
+			if (currentIterator.hasNext()) {
+				return true;
+			}
 
-				if (currentIterator.hasNext()) {
-					return true;
-				}
+			if (currentWindow != null && currentWindow.hasNext()) {
 
-				if (currentWindow != null && currentWindow.hasNext()) {
-
-					currentPosition = getNextPosition(currentPosition, currentWindow);
-					currentIterator = null;
-					currentWindow = null;
-					continue;
-				}
+				currentPosition = getNextPosition(currentPosition, currentWindow);
+				currentIterator = null;
+				currentWindow = null;
+				continue;
 			}
 
 			return false;
@@ -109,6 +104,7 @@ public class WindowIterator<T> implements Iterator<T> {
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public T next() {
 
 		if (!hasNext()) {

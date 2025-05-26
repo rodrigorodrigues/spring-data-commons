@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2024 the original author or authors.
+ * Copyright 2018-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.junit.Test
  * @author Tjeu Kayim
  * @author Yoann de Martino
  * @author Mark Paluch
+ * @author Mikhail Polivakha
  */
 class KPropertyPathTests {
 
@@ -41,6 +42,22 @@ class KPropertyPathTests {
 		val property = (Book::author / Author::name).toDotPath()
 
 		assertThat(property).isEqualTo("author.name")
+	}
+
+	@Test // GH-3010
+	fun `Convert from Iterable nested KProperty to field name`() {
+
+		val property = (Author::books / Book::title).toDotPath()
+
+		assertThat(property).isEqualTo("books.title")
+	}
+
+	@Test // GH-3010
+	fun `Convert from Iterable nested Iterable Property to field name`() {
+
+		val property = (Author::books / Book::author / Author::name).toDotPath()
+
+		assertThat(property).isEqualTo("books.author.name")
 	}
 
 	@Test // DATACMNS-1835
@@ -65,6 +82,18 @@ class KPropertyPathTests {
 	}
 
 	@Test // DATACMNS-1835
+	fun `Convert triple nested KProperty to property path using toDotPath`() {
+
+		class Entity(val book: Book)
+		class AnotherEntity(val entity: Entity)
+
+		val property =
+			(AnotherEntity::entity / Entity::book / Book::author / Author::name).toDotPath()
+
+		assertThat(property).isEqualTo("entity.book.author.name")
+	}
+
+	@Test // DATACMNS-1835
 	fun `Convert simple KProperty to property path using toDotPath`() {
 
 		class AnotherEntity(val entity: String)
@@ -83,18 +112,6 @@ class KPropertyPathTests {
 	}
 
 	@Test // DATACMNS-1835
-	fun `Convert triple nested KProperty to property path using toDotPath`() {
-
-		class Entity(val book: Book)
-		class AnotherEntity(val entity: Entity)
-
-		val property =
-			(AnotherEntity::entity / Entity::book / Book::author / Author::name).toDotPath()
-
-		assertThat(property).isEqualTo("entity.book.author.name")
-	}
-
-	@Test // DATACMNS-1835
 	fun `Convert nullable KProperty to field name`() {
 
 		class Cat(val name: String?)
@@ -105,5 +122,6 @@ class KPropertyPathTests {
 	}
 
 	class Book(val title: String, val author: Author)
-	class Author(val name: String)
+	class Author(val name: String, val books: List<Book>)
+
 }

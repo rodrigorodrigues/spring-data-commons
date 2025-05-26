@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package org.springframework.data.repository.config;
 
 import java.lang.annotation.Annotation;
+import java.util.Collection;
 import java.util.Set;
 
 import org.springframework.core.annotation.MergedAnnotation;
@@ -27,8 +28,9 @@ import org.springframework.data.repository.core.RepositoryInformation;
  *
  * @author Christoph Strobl
  * @author John Blum
- * @see AotContext
+ * @author Mark Paluch
  * @since 3.0
+ * @see AotContext
  */
 public interface AotRepositoryContext extends AotContext {
 
@@ -38,14 +40,27 @@ public interface AotRepositoryContext extends AotContext {
 	String getBeanName();
 
 	/**
+	 * @return the Spring Data module name, see {@link RepositoryConfigurationExtension#getModuleName()}.
+	 * @since 4.0
+	 */
+	String getModuleName();
+
+	/**
+	 * @return the repository configuration source.
+	 */
+	RepositoryConfigurationSource getConfigurationSource();
+
+	/**
 	 * @return a {@link Set} of {@link String base packages} to search for repositories.
 	 */
-	Set<String> getBasePackages();
+	default Set<String> getBasePackages() {
+		return getConfigurationSource().getBasePackages().toSet();
+	}
 
 	/**
 	 * @return the {@link Annotation} types used to identify domain types.
 	 */
-	Set<Class<? extends Annotation>> getIdentifyingAnnotations();
+	Collection<Class<? extends Annotation>> getIdentifyingAnnotations();
 
 	/**
 	 * @return {@link RepositoryInformation metadata} about the repository itself.

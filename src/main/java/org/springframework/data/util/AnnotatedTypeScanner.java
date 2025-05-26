@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.EnvironmentAware;
@@ -32,7 +34,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -44,7 +45,7 @@ import org.springframework.util.ClassUtils;
  */
 public class AnnotatedTypeScanner implements ResourceLoaderAware, EnvironmentAware {
 
-	private final Iterable<Class<? extends Annotation>> annotationTypess;
+	private final Iterable<Class<? extends Annotation>> annotationTypes;
 	private final boolean considerInterfaces;
 
 	private @Nullable ResourceLoader resourceLoader;
@@ -83,7 +84,7 @@ public class AnnotatedTypeScanner implements ResourceLoaderAware, EnvironmentAwa
 	public AnnotatedTypeScanner(boolean considerInterfaces, Collection<Class<? extends Annotation>> annotationTypes) {
 
 		this.considerInterfaces = considerInterfaces;
-		this.annotationTypess = annotationTypes;
+		this.annotationTypes = annotationTypes;
 	}
 
 	@Override
@@ -146,7 +147,7 @@ public class AnnotatedTypeScanner implements ResourceLoaderAware, EnvironmentAwa
 	}
 
 	public Set<Class<?>> findTypes(Iterable<String> basePackages) {
-		return findTypes(basePackages, Streamable.of(annotationTypess).stream().map(annotation -> new AnnotationTypeFilter(annotation, true, considerInterfaces)).collect(Collectors.toSet()));
+		return findTypes(basePackages, Streamable.of(annotationTypes).stream().map(annotation -> new AnnotationTypeFilter(annotation, true, considerInterfaces)).collect(Collectors.toSet()));
 	}
 
 	/**

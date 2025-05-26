@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2024 the original author or authors.
+ * Copyright 2010-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,11 @@
  */
 package org.springframework.data.geo;
 
-import org.springframework.data.annotation.PersistenceConstructor;
+import java.io.Serial;
+
+import org.jspecify.annotations.Nullable;
+
+import org.springframework.data.annotation.PersistenceCreator;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -29,7 +33,7 @@ import org.springframework.util.ObjectUtils;
  */
 public class Circle implements Shape {
 
-	private static final long serialVersionUID = 5215611530535947924L;
+	private static final @Serial long serialVersionUID = 5215611530535947924L;
 
 	private final Point center;
 	private final Distance radius;
@@ -40,7 +44,7 @@ public class Circle implements Shape {
 	 * @param center must not be {@literal null}.
 	 * @param radius must not be {@literal null} and it's value greater or equal to zero.
 	 */
-	@PersistenceConstructor
+	@PersistenceCreator
 	public Circle(Point center, Distance radius) {
 
 		Assert.notNull(center, "Center point must not be null");
@@ -65,8 +69,8 @@ public class Circle implements Shape {
 	 * Creates a new {@link Circle} from the given coordinates and radius as {@link Distance} with a
 	 * {@link Metrics#NEUTRAL}.
 	 *
-	 * @param centerX
-	 * @param centerY
+	 * @param centerX X coordinate of the center point.
+	 * @param centerY Y coordinate of the center point.
 	 * @param radius must be greater or equal to zero.
 	 */
 	public Circle(double centerX, double centerY, double radius) {
@@ -85,14 +89,14 @@ public class Circle implements Shape {
 	/**
 	 * Returns the radius of the {@link Circle}.
 	 *
-	 * @return
+	 * @return the radius.
 	 */
 	public Distance getRadius() {
 		return radius;
 	}
 
 	@Override
-	public boolean equals(Object o) {
+	public boolean equals(@Nullable Object o) {
 
 		if (this == o) {
 			return true;
@@ -111,9 +115,7 @@ public class Circle implements Shape {
 
 	@Override
 	public int hashCode() {
-		int result = ObjectUtils.nullSafeHashCode(center);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(radius);
-		return result;
+		return ObjectUtils.nullSafeHash(center, radius);
 	}
 
 	@Override

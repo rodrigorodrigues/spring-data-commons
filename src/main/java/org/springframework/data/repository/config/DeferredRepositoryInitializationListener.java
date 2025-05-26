@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2024 the original author or authors.
+ * Copyright 2018-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import org.springframework.data.repository.Repository;
 class DeferredRepositoryInitializationListener implements ApplicationListener<ContextRefreshedEvent>, Ordered {
 
 	private static final Log logger = LogFactory.getLog(DeferredRepositoryInitializationListener.class);
+
 	private final ListableBeanFactory beanFactory;
 
 	DeferredRepositoryInitializationListener(ListableBeanFactory beanFactory) {

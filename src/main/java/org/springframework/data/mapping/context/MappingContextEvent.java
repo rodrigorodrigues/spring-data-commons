@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 package org.springframework.data.mapping.context;
+
+import java.io.Serial;
 
 import org.springframework.context.ApplicationEvent;
 import org.springframework.data.mapping.PersistentEntity;
@@ -31,7 +33,7 @@ import org.springframework.util.Assert;
 public class MappingContextEvent<E extends PersistentEntity<?, P>, P extends PersistentProperty<P>> extends
 		ApplicationEvent {
 
-	private static final long serialVersionUID = 1336466833846092490L;
+	private static final @Serial long serialVersionUID = 1336466833846092490L;
 
 	private final MappingContext<?, ?> source;
 	private final E entity;

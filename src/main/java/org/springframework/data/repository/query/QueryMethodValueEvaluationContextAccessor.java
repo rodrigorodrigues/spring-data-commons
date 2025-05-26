@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 the original author or authors.
+ * Copyright 2024-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
@@ -38,7 +40,6 @@ import org.springframework.data.spel.spi.EvaluationContextExtension;
 import org.springframework.data.spel.spi.ExtensionIdAware;
 import org.springframework.data.util.ReactiveWrappers;
 import org.springframework.expression.EvaluationContext;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -56,7 +57,7 @@ public class QueryMethodValueEvaluationContextAccessor {
 
 	static final StandardEnvironment ENVIRONMENT = new StandardEnvironment();
 
-	private final @Nullable Environment environment;
+	private final Environment environment;
 	private final EvaluationContextProvider evaluationContextProvider;
 
 	/**
@@ -79,7 +80,7 @@ public class QueryMethodValueEvaluationContextAccessor {
 	 * @param environment
 	 * @param beanFactory the bean factory to use, must not be {@literal null}.
 	 */
-	public QueryMethodValueEvaluationContextAccessor(@Nullable Environment environment, ListableBeanFactory beanFactory) {
+	public QueryMethodValueEvaluationContextAccessor(Environment environment, ListableBeanFactory beanFactory) {
 		this(environment, createEvaluationContextProvider(beanFactory));
 	}
 
@@ -91,9 +92,10 @@ public class QueryMethodValueEvaluationContextAccessor {
 	 * @param evaluationContextProvider the underlying {@link EvaluationContextProvider} to use, must not be
 	 *          {@literal null}.
 	 */
-	public QueryMethodValueEvaluationContextAccessor(@Nullable Environment environment,
+	public QueryMethodValueEvaluationContextAccessor(Environment environment,
 			EvaluationContextProvider evaluationContextProvider) {
 
+		Assert.notNull(environment, "Environment must not be null");
 		Assert.notNull(evaluationContextProvider, "EvaluationContextProvider must not be null");
 
 		this.environment = environment;
@@ -106,16 +108,17 @@ public class QueryMethodValueEvaluationContextAccessor {
 	 * @param environment
 	 * @param extensions must not be {@literal null}.
 	 */
-	public QueryMethodValueEvaluationContextAccessor(@Nullable Environment environment,
+	public QueryMethodValueEvaluationContextAccessor(Environment environment,
 			Collection<? extends ExtensionIdAware> extensions) {
 
+		Assert.notNull(environment, "Environment must not be null");
 		Assert.notNull(extensions, "EvaluationContextExtensions must not be null");
 
 		this.environment = environment;
 		this.evaluationContextProvider = createEvaluationContextProvider(extensions);
 	}
 
-	private static EvaluationContextProvider createEvaluationContextProvider(ListableBeanFactory factory) {
+	public static EvaluationContextProvider createEvaluationContextProvider(ListableBeanFactory factory) {
 
 		return ReactiveWrappers.isAvailable(ReactiveWrappers.ReactiveLibrary.PROJECT_REACTOR)
 				? new ReactiveExtensionAwareEvaluationContextProvider(factory)
@@ -206,11 +209,11 @@ public class QueryMethodValueEvaluationContextAccessor {
 	 */
 	static class DefaultQueryMethodValueEvaluationContextProvider implements ValueEvaluationContextProvider {
 
-		final @Nullable Environment environment;
+		final Environment environment;
 		final Parameters<?, ?> parameters;
 		final EvaluationContextProvider delegate;
 
-		DefaultQueryMethodValueEvaluationContextProvider(@Nullable Environment environment, Parameters<?, ?> parameters,
+		DefaultQueryMethodValueEvaluationContextProvider(Environment environment, Parameters<?, ?> parameters,
 				EvaluationContextProvider delegate) {
 			this.environment = environment;
 			this.parameters = parameters;
@@ -248,7 +251,7 @@ public class QueryMethodValueEvaluationContextAccessor {
 
 		private final ReactiveEvaluationContextProvider delegate;
 
-		DefaultReactiveQueryMethodValueEvaluationContextProvider(@Nullable Environment environment,
+		DefaultReactiveQueryMethodValueEvaluationContextProvider(Environment environment,
 				Parameters<?, ?> parameters, ReactiveEvaluationContextProvider delegate) {
 			super(environment, parameters, delegate);
 			this.delegate = delegate;

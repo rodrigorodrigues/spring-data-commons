@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,22 +96,22 @@ class ReflectionUtilsUnitTests {
 
 	@Test // DATACMNS-542
 	void detectsConstructorForCompleteMatch() throws Exception {
-		assertThat(ReflectionUtils.findConstructor(ConstructorDetection.class, 2, "test")).hasValue(constructor);
+		assertThat(ReflectionUtils.findConstructor(ConstructorDetection.class, 2, "test")).isEqualTo(constructor);
 	}
 
 	@Test // DATACMNS-542
 	void detectsConstructorForMatchWithNulls() throws Exception {
-		assertThat(ReflectionUtils.findConstructor(ConstructorDetection.class, 2, null)).hasValue(constructor);
+		assertThat(ReflectionUtils.findConstructor(ConstructorDetection.class, 2, null)).isEqualTo(constructor);
 	}
 
 	@Test // DATACMNS-542
 	void rejectsConstructorIfNumberOfArgumentsDontMatch() throws Exception {
-		assertThat(ReflectionUtils.findConstructor(ConstructorDetection.class, 2, "test", "test")).isNotPresent();
+		assertThat(ReflectionUtils.findConstructor(ConstructorDetection.class, 2, "test", "test")).isNull();
 	}
 
 	@Test // DATACMNS-542
 	void rejectsConstructorForNullForPrimitiveArgument() throws Exception {
-		assertThat(ReflectionUtils.findConstructor(ConstructorDetection.class, null, "test")).isNotPresent();
+		assertThat(ReflectionUtils.findConstructor(ConstructorDetection.class, null, "test")).isNull();
 	}
 
 	@Test // DATACMNS-1154

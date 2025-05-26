@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 the original author or authors.
+ * Copyright 2023-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@ import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
-import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -86,19 +87,23 @@ class WindowImpl<T> implements Window<T> {
 		return new WindowImpl<>(stream().map(converter).collect(Collectors.toList()), positionFunction, hasNext);
 	}
 
-	@NotNull
 	@Override
 	public Iterator<T> iterator() {
 		return items.iterator();
 	}
 
 	@Override
-	public boolean equals(Object o) {
-		if (this == o)
+	public boolean equals(@Nullable Object o) {
+
+		if (this == o) {
 			return true;
-		if (o == null || getClass() != o.getClass())
+		}
+		if (o == null || getClass() != o.getClass()) {
 			return false;
+		}
+
 		WindowImpl<?> that = (WindowImpl<?>) o;
+
 		return ObjectUtils.nullSafeEquals(items, that.items)
 				&& ObjectUtils.nullSafeEquals(positionFunction, that.positionFunction)
 				&& ObjectUtils.nullSafeEquals(hasNext, that.hasNext);
@@ -106,9 +111,11 @@ class WindowImpl<T> implements Window<T> {
 
 	@Override
 	public int hashCode() {
+
 		int result = ObjectUtils.nullSafeHashCode(items);
 		result = 31 * result + ObjectUtils.nullSafeHashCode(positionFunction);
 		result = 31 * result + ObjectUtils.nullSafeHashCode(hasNext);
+
 		return result;
 	}
 

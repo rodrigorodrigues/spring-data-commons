@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 the original author or authors.
+ * Copyright 2023-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 
 /**
@@ -204,9 +205,9 @@ class KotlinValueUtils {
 
 		private final KClass<?> kClass;
 
-		private final KFunction<?> wrapperConstructor;
+		private final @Nullable KFunction<?> wrapperConstructor;
 
-		private final KProperty<?> valueProperty;
+		private final @Nullable KProperty<?> valueProperty;
 
 		private final boolean applyBoxing;
 
@@ -341,7 +342,7 @@ class KotlinValueUtils {
 		public Class<?> getParameterType() {
 
 			if (hasNext() && getNext().appliesBoxing()) {
-				return next.getParameterType();
+				return getNext().getParameterType();
 			}
 
 			return JvmClassMappingKt.getJavaClass(kClass);
@@ -387,8 +388,7 @@ class KotlinValueUtils {
 		 * @param o
 		 * @return
 		 */
-		@Nullable
-		public Object wrap(@Nullable Object o) {
+		public @Nullable Object wrap(@Nullable Object o) {
 			return doWrap(o, false, ValueBoxing::wrap);
 		}
 
@@ -410,18 +410,20 @@ class KotlinValueUtils {
 		 * pass on the result into {@code nextWrapStage}.
 		 */
 		@Nullable
-		Object doWrap(@Nullable Object o, boolean unwrap, BiFunction<ValueBoxing, Object, Object> nextWrapStage) {
+		Object doWrap(@Nullable Object o, boolean unwrap,
+				BiFunction<ValueBoxing, @Nullable Object, @Nullable Object> nextWrapStage) {
 
 			if (applyBoxing) {
-				return o == null || kClass.isInstance(o) ? o : wrapperConstructor.call(nextWrapStage.apply(next, o));
+				return o == null || kClass.isInstance(o) || wrapperConstructor == null ? o
+						: wrapperConstructor.call(nextWrapStage.apply(getNext(), o));
 			} else if (unwrap && kClass.isValue()) {
-				if (o != null && kClass.isInstance(o)) {
+				if (o != null && kClass.isInstance(o) && valueProperty != null) {
 					o = valueProperty.getGetter().call(o);
 				}
 			}
 
 			if (hasNext()) {
-				return nextWrapStage.apply(next, o);
+				return nextWrapStage.apply(getNext(), o);
 			}
 
 			return o;

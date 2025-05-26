@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.convert.TypeDescriptor;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -39,7 +40,6 @@ import org.springframework.util.Assert;
  * @author Johannes Englmeier
  * @author Christoph Strobl
  */
-@SuppressWarnings({ "deprecation", "rawtypes" })
 public interface TypeInformation<S> {
 
 	TypeInformation<Collection> COLLECTION = ClassTypeInformation.COLLECTION;
@@ -336,7 +336,7 @@ public interface TypeInformation<S> {
 
 	/**
 	 * Returns if the current {@link TypeInformation} can be safely assigned to the given one. Mimics semantics of
-	 * {@link Class#isAssignableFrom(Class)} but takes generics into account. Thus it will allow to detect that a
+	 * {@link Class#isAssignableFrom(Class)} but takes generics into account. Thus, it will allow to detect that a
 	 * {@code List<Long>} is assignable to {@code List<? extends Number>}.
 	 *
 	 * @param target
@@ -382,4 +382,13 @@ public interface TypeInformation<S> {
 	 * @since 2.7
 	 */
 	TypeDescriptor toTypeDescriptor();
+
+	/**
+	 * Returns the {@link ResolvableType} for this type information.
+	 *
+	 * @return will never be {@literal null}.
+	 * @since 4.0
+	 */
+	ResolvableType toResolvableType();
+
 }

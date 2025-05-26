@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,11 @@ import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.core.ResolvableType;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Range;
+import org.springframework.data.domain.Score;
 import org.springframework.data.domain.ScrollPosition;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Vector;
 import org.springframework.data.repository.util.QueryExecutionConverters;
 import org.springframework.data.repository.util.ReactiveWrapperConverters;
 import org.springframework.data.util.ClassUtils;
@@ -55,6 +58,7 @@ public class Parameter {
 
 	private final MethodParameter parameter;
 	private final Class<?> parameterType;
+	private final boolean isScoreRange;
 	private final boolean isDynamicProjectionParameter;
 	private final Lazy<Optional<String>> name;
 
@@ -71,16 +75,6 @@ public class Parameter {
 		TYPES = Collections.unmodifiableList(types);
 	}
 
-	/**
-	 * Creates a new {@link Parameter} for the given {@link MethodParameter}.
-	 *
-	 * @param parameter must not be {@literal null}.
-	 * @deprecated since 3.1, use {@link #Parameter(MethodParameter, TypeInformation)} instead.
-	 */
-	@Deprecated(since = "3.1", forRemoval = true)
-	protected Parameter(MethodParameter parameter) {
-		this(parameter, TypeInformation.of(Parameter.class));
-	}
 
 	/**
 	 * Creates a new {@link Parameter} for the given {@link MethodParameter} and domain {@link TypeInformation}.
@@ -95,9 +89,11 @@ public class Parameter {
 		Assert.notNull(domainType, "TypeInformation must not be null!");
 
 		this.parameter = parameter;
+		this.isScoreRange = Range.class.isAssignableFrom(parameter.getParameterType())
+				&& ResolvableType.forMethodParameter(parameter).getGeneric(0).isAssignableFrom(Score.class);
 		this.parameterType = potentiallyUnwrapParameterType(parameter);
 		this.isDynamicProjectionParameter = isDynamicProjectionParameter(parameter, domainType);
-		this.name = isSpecialParameterType(parameter.getParameterType()) ? Lazy.of(Optional.empty()) : Lazy.of(() -> {
+		this.name = Lazy.of(() -> {
 			Param annotation = parameter.getParameterAnnotation(Param.class);
 			return Optional.ofNullable(annotation == null ? parameter.getParameterName() : annotation.value());
 		});
@@ -136,6 +132,7 @@ public class Parameter {
 	 *
 	 * @return
 	 */
+	@SuppressWarnings("NullAway")
 	public String getPlaceholder() {
 
 		if (isNamedParameter()) {
@@ -166,9 +163,22 @@ public class Parameter {
 	}
 
 	/**
+	 * Returns whether the parameter is named explicitly, i.e. annotated with {@link Param}.
+	 *
+	 * @return
+	 * @since 1.11
+	 * @see Param
+	 */
+	public boolean isExplicitlyNamed() {
+		return parameter.hasParameterAnnotation(Param.class);
+	}
+
+	/**
 	 * Returns the name of the parameter (through {@link Param} annotation or method parameter naming).
 	 *
 	 * @return the optional name of the parameter.
+	 * @see Param
+	 * @see org.springframework.core.ParameterNameDiscoverer
 	 */
 	public Optional<String> getName() {
 		return this.name.get();
@@ -181,6 +191,8 @@ public class Parameter {
 	 * @return the required parameter name.
 	 * @throws IllegalStateException if the parameter has no name.
 	 * @since 3.4
+	 * @see Param
+	 * @see org.springframework.core.ParameterNameDiscoverer
 	 */
 	public String getRequiredName() {
 
@@ -197,15 +209,6 @@ public class Parameter {
 		return parameterType;
 	}
 
-	/**
-	 * Returns whether the parameter is named explicitly, i.e. annotated with {@link Param}.
-	 *
-	 * @return
-	 * @since 1.11
-	 */
-	public boolean isExplicitlyNamed() {
-		return parameter.hasParameterAnnotation(Param.class);
-	}
 
 	@Override
 	public String toString() {
@@ -213,9 +216,31 @@ public class Parameter {
 	}
 
 	/**
-	 * Returns whether the {@link Parameter} is a {@link ScrollPosition} parameter.
-	 *
-	 * @return
+	 * @return {@literal true} if the {@link Parameter} is a {@link Vector} parameter.
+	 * @since 4.0
+	 */
+	boolean isVector() {
+		return Vector.class.isAssignableFrom(getType());
+	}
+
+	/**
+	 * @return {@literal true} if the {@link Parameter} is a {@link Score} parameter.
+	 * @since 4.0
+	 */
+	boolean isScore() {
+		return Score.class.isAssignableFrom(getType());
+	}
+
+	/**
+	 * @return {@literal true} if the {@link Parameter} is a {@link Range} of {@link Score} parameter.
+	 * @since 4.0
+	 */
+	boolean isScoreRange() {
+		return isScoreRange;
+	}
+
+	/**
+	 * @return {@literal true} if the {@link Parameter} is a {@link ScrollPosition} parameter.
 	 * @since 3.1
 	 */
 	boolean isScrollPosition() {
@@ -223,27 +248,21 @@ public class Parameter {
 	}
 
 	/**
-	 * Returns whether the {@link Parameter} is a {@link Pageable} parameter.
-	 *
-	 * @return
+	 * @return {@literal true} if the {@link Parameter} is a {@link Pageable} parameter.
 	 */
 	boolean isPageable() {
 		return Pageable.class.isAssignableFrom(getType());
 	}
 
 	/**
-	 * Returns whether the {@link Parameter} is a {@link Sort} parameter.
-	 *
-	 * @return
+	 * @return {@literal true} if the {@link Parameter} is a {@link Sort} parameter.
 	 */
 	boolean isSort() {
 		return Sort.class.isAssignableFrom(getType());
 	}
 
 	/**
-	 * Returns whether the {@link Parameter} is a {@link Limit} parameter.
-	 *
-	 * @return
+	 * @return {@literal true} if the {@link Parameter} is a {@link Limit} parameter.
 	 * @since 3.2
 	 */
 	boolean isLimit() {

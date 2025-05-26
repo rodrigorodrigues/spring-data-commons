@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,9 @@ import java.util.Collection;
 import java.util.Locale;
 import java.util.Optional;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultBeanNameGenerator;
 import org.springframework.beans.factory.xml.ParserContext;
@@ -31,10 +34,9 @@ import org.springframework.data.config.TypeFilterParser.Type;
 import org.springframework.data.repository.query.QueryLookupStrategy.Key;
 import org.springframework.data.util.ParsingUtils;
 import org.springframework.data.util.Streamable;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
 import org.w3c.dom.Element;
 
 /**
@@ -140,6 +142,11 @@ public class XmlRepositoryConfigurationSource extends RepositoryConfigurationSou
 	@Override
 	public Optional<String> getRepositoryBaseClassName() {
 		return getNullDefaultedAttribute(element, REPOSITORY_BASE_CLASS_NAME);
+	}
+
+	@Override
+	public Optional<String> getRepositoryFragmentsContributorClassName() {
+		return Optional.empty();
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package org.springframework.data.auditing.config;
 
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.*;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.aop.framework.ProxyFactoryBean;
 import org.springframework.aop.target.LazyInitTargetSource;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -29,9 +31,9 @@ import org.springframework.data.auditing.AuditingHandler;
 import org.springframework.data.config.ParsingUtils;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.repository.config.PersistentEntitiesFactoryBean;
-import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
 import org.w3c.dom.Element;
 
 /**
@@ -45,7 +47,7 @@ public class AuditingHandlerBeanDefinitionParser extends AbstractSingleBeanDefin
 	private static final String AUDITOR_AWARE_REF = "auditor-aware-ref";
 
 	private final String mappingContextBeanName;
-	private String resolvedBeanName;
+	private @Nullable String resolvedBeanName;
 
 	/**
 	 * Creates a new {@link AuditingHandlerBeanDefinitionParser} to point to a {@link MappingContext} with the given bean
@@ -65,11 +67,10 @@ public class AuditingHandlerBeanDefinitionParser extends AbstractSingleBeanDefin
 	 *
 	 * @return the resolvedBeanName
 	 */
-	public String getResolvedBeanName() {
+	public @Nullable String getResolvedBeanName() {
 		return resolvedBeanName;
 	}
 
-	@NonNull
 	@Override
 	protected Class<?> getBeanClass(Element element) {
 		return AuditingHandler.class;

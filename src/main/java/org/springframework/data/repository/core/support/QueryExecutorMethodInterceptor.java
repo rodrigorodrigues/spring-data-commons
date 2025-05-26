@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 the original author or authors.
+ * Copyright 2020-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
@@ -39,7 +39,6 @@ import org.springframework.data.repository.query.QueryMethod;
 import org.springframework.data.repository.query.RepositoryQuery;
 import org.springframework.data.repository.util.QueryExecutionConverters;
 import org.springframework.data.util.Pair;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ConcurrentReferenceHashMap;
 
 /**
@@ -69,7 +68,7 @@ class QueryExecutorMethodInterceptor implements MethodInterceptor {
 	 * execution of repository interface methods.
 	 */
 	public QueryExecutorMethodInterceptor(RepositoryInformation repositoryInformation,
-			ProjectionFactory projectionFactory, Optional<QueryLookupStrategy> queryLookupStrategy, NamedQueries namedQueries,
+			ProjectionFactory projectionFactory, @Nullable QueryLookupStrategy queryLookupStrategy, NamedQueries namedQueries,
 			List<QueryCreationListener<?>> queryPostProcessors,
 			List<RepositoryMethodInvocationListener> methodInvocationListeners) {
 
@@ -81,22 +80,21 @@ class QueryExecutorMethodInterceptor implements MethodInterceptor {
 
 		this.resultHandler = new QueryExecutionResultHandler(RepositoryFactorySupport.CONVERSION_SERVICE);
 
-		if (!queryLookupStrategy.isPresent() && repositoryInformation.hasQueryMethods()) {
+		if (queryLookupStrategy == null && repositoryInformation.hasQueryMethods()) {
 
 			throw new IllegalStateException(
 					"You have defined query methods in the repository" + " but do not have any query lookup strategy defined."
 							+ " The infrastructure apparently does not support query methods");
 		}
-
-		this.queries = queryLookupStrategy //
-				.map(it -> mapMethodsToQuery(repositoryInformation, it, projectionFactory)) //
-				.orElse(Collections.emptyMap());
+		this.queries = queryLookupStrategy != null
+				? mapMethodsToQuery(repositoryInformation, queryLookupStrategy, projectionFactory)
+				: Collections.emptyMap();
 	}
 
 	private Map<Method, RepositoryQuery> mapMethodsToQuery(RepositoryInformation repositoryInformation,
 			QueryLookupStrategy lookupStrategy, ProjectionFactory projectionFactory) {
 
-		List<Method> queryMethods = repositoryInformation.getQueryMethods().toList();
+		List<Method> queryMethods = repositoryInformation.getQueryMethods();
 		Map<Method, RepositoryQuery> result = new HashMap<>(queryMethods.size(), 1.0f);
 
 		for (Method method : queryMethods) {
@@ -129,15 +127,14 @@ class QueryExecutorMethodInterceptor implements MethodInterceptor {
 			ResolvableType typeArgument = ResolvableType.forClass(QueryCreationListener.class, listener.getClass())
 					.getGeneric(0);
 
-			if (typeArgument != null && typeArgument.isAssignableFrom(ResolvableType.forClass(query.getClass()))) {
+			if (typeArgument.isAssignableFrom(ResolvableType.forClass(query.getClass()))) {
 				listener.onCreation(query);
 			}
 		}
 	}
 
 	@Override
-	@Nullable
-	public Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
+	public @Nullable Object invoke(MethodInvocation invocation) throws Throwable {
 
 		Method method = invocation.getMethod();
 		MethodParameter returnType = returnTypeMap.computeIfAbsent(method, it -> new MethodParameter(it, -1));
@@ -153,8 +150,8 @@ class QueryExecutorMethodInterceptor implements MethodInterceptor {
 				.apply(() -> resultHandler.postProcessInvocationResult(doInvoke(invocation), returnType));
 	}
 
-	@Nullable
-	private Object doInvoke(MethodInvocation invocation) throws Throwable {
+	@SuppressWarnings("NullAway")
+	private @Nullable Object doInvoke(MethodInvocation invocation) throws Throwable {
 
 		Method method = invocation.getMethod();
 

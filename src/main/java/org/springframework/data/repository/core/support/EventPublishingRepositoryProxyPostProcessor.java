@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024 the original author or authors.
+ * Copyright 2016-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import java.util.function.Supplier;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.AfterDomainEventPublication;
@@ -32,7 +34,6 @@ import org.springframework.data.domain.DomainEvents;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.util.AnnotationDetectionMethodCallback;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ConcurrentReferenceHashMap;
 import org.springframework.util.ReflectionUtils;
@@ -103,8 +104,7 @@ public class EventPublishingRepositoryProxyPostProcessor implements RepositoryPr
 		}
 
 		@Override
-		@Nullable
-		public Object invoke(MethodInvocation invocation) throws Throwable {
+		public @Nullable Object invoke(MethodInvocation invocation) throws Throwable {
 
 			Object result = invocation.proceed();
 
@@ -142,18 +142,19 @@ public class EventPublishingRepositoryProxyPostProcessor implements RepositoryPr
 	 */
 	static class EventPublishingMethod {
 
-		private static Map<Class<?>, EventPublishingMethod> cache = new ConcurrentReferenceHashMap<>();
-		private static @SuppressWarnings("null") EventPublishingMethod NONE = new EventPublishingMethod(Object.class, null,
+		private static final Map<Class<?>, EventPublishingMethod> cache = new ConcurrentReferenceHashMap<>();
+		private static final @SuppressWarnings("null") EventPublishingMethod NONE = new EventPublishingMethod(Object.class,
+				null,
 				null);
-		private static String ILLEGAL_MODIFCATION = "Aggregate's events were modified during event publication. "
+		private static final String ILLEGAL_MODIFICATION = "Aggregate's events were modified during event publication. "
 				+ "Make sure event listeners obtain a fresh instance of the aggregate before adding further events. "
 				+ "Additional events found: %s.";
 
 		private final Class<?> type;
-		private final Method publishingMethod;
+		private final @Nullable Method publishingMethod;
 		private final @Nullable Method clearingMethod;
 
-		EventPublishingMethod(Class<?> type, Method publishingMethod, @Nullable Method clearingMethod) {
+		EventPublishingMethod(Class<?> type, @Nullable Method publishingMethod, @Nullable Method clearingMethod) {
 
 			this.type = type;
 			this.publishingMethod = publishingMethod;
@@ -167,8 +168,7 @@ public class EventPublishingRepositoryProxyPostProcessor implements RepositoryPr
 		 * @return an {@link EventPublishingMethod} for the given type or {@literal null} in case the given type does not
 		 *         expose an event publishing method.
 		 */
-		@Nullable
-		public static EventPublishingMethod of(Class<?> type) {
+		public static @Nullable EventPublishingMethod of(Class<?> type) {
 
 			Assert.notNull(type, "Type must not be null");
 
@@ -194,7 +194,7 @@ public class EventPublishingRepositoryProxyPostProcessor implements RepositoryPr
 		 */
 		public void publishEventsFrom(@Nullable Iterable<?> aggregates, ApplicationEventPublisher publisher) {
 
-			if (aggregates == null) {
+			if (aggregates == null || publishingMethod == null) {
 				return;
 			}
 
@@ -216,7 +216,7 @@ public class EventPublishingRepositoryProxyPostProcessor implements RepositoryPr
 
 					postPublication.removeAll(events);
 
-					throw new IllegalStateException(ILLEGAL_MODIFCATION.formatted(postPublication));
+					throw new IllegalStateException(ILLEGAL_MODIFICATION.formatted(postPublication));
 				}
 
 				if (clearingMethod != null) {
@@ -230,8 +230,7 @@ public class EventPublishingRepositoryProxyPostProcessor implements RepositoryPr
 		 *
 		 * @return
 		 */
-		@Nullable
-		private EventPublishingMethod orNull() {
+		private @Nullable EventPublishingMethod orNull() {
 			return this == EventPublishingMethod.NONE ? null : this;
 		}
 
@@ -271,8 +270,7 @@ public class EventPublishingRepositoryProxyPostProcessor implements RepositoryPr
 		 * @param clearing must not be {@literal null}.
 		 * @return
 		 */
-		@Nullable
-		private static Method getClearingMethod(AnnotationDetectionMethodCallback<?> clearing) {
+		private static @Nullable Method getClearingMethod(AnnotationDetectionMethodCallback<?> clearing) {
 
 			if (!clearing.hasFoundAnnotation()) {
 				return null;
@@ -313,9 +311,8 @@ public class EventPublishingRepositoryProxyPostProcessor implements RepositoryPr
 	 * @param source can be {@literal null}.
 	 * @return will never be {@literal null}.
 	 */
-	@Nullable
 	@SuppressWarnings("unchecked")
-	private static Iterable<Object> asIterable(@Nullable Object source, @Nullable Method method) {
+	private static @Nullable Iterable<Object> asIterable(@Nullable Object source, @Nullable Method method) {
 
 		return method != null && method.getName().startsWith("saveAll")
 				? (Iterable<Object>) source

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2024 the original author or authors.
+ * Copyright 2017-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
 import org.springframework.data.repository.Repository;
@@ -37,7 +39,6 @@ import org.springframework.data.repository.core.support.MethodLookup.MethodPredi
 import org.springframework.data.repository.util.QueryExecutionConverters;
 import org.springframework.data.repository.util.ReactiveWrapperConverters;
 import org.springframework.data.util.ReactiveWrappers;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -122,19 +123,26 @@ interface MethodLookups {
 
 			Assert.notNull(repositoryMetadata, "Repository metadata must not be null");
 
-			this.entityType = repositoryMetadata.getDomainTypeInformation().toTypeDescriptor().getResolvableType();
-			this.idType = repositoryMetadata.getIdTypeInformation().toTypeDescriptor().getResolvableType();
+			this.entityType = repositoryMetadata.getDomainTypeInformation().toResolvableType();
+			this.idType = repositoryMetadata.getIdTypeInformation().toResolvableType();
 			this.repositoryInterface = repositoryMetadata.getRepositoryInterface();
 		}
 
 		@Override
 		public List<MethodPredicate> getLookups() {
 
-			MethodPredicate detailedComparison = (MethodPredicate) (invoked, candidate) -> Optional.of(candidate)
-					.filter(baseClassMethod -> baseClassMethod.getName().equals(invoked.getName()))// Right name
-					.filter(baseClassMethod -> baseClassMethod.getParameterCount() == invoked.getParameterCount())
-					.filter(baseClassMethod -> parametersMatch(invoked.getMethod(), baseClassMethod))// All parameters match
-					.isPresent();
+			MethodPredicate detailedComparison = (MethodPredicate) (invoked, candidate) -> {
+
+				if (candidate.getParameterCount() != invoked.getParameterCount()) {
+					return false;
+				}
+
+				if (!candidate.getName().equals(invoked.getName())) {
+					return false;
+				}
+
+				return parametersMatch(invoked.getMethod(), candidate);
+			};
 
 			return Collections.singletonList(detailedComparison);
 		}

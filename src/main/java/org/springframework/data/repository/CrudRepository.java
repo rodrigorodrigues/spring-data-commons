@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,10 @@ import java.util.Optional;
 import org.springframework.dao.OptimisticLockingFailureException;
 
 /**
- * Interface for generic CRUD operations on a repository for a specific type.
+ * Interface for generic CRUD operations on a repository for a specific type. Methods exposed through this interface
+ * allow entities to participate in lifecycle events, and optimistic locking if applicable except for some bulk
+ * operation methods. Therefore, modules may choose to load an entity before deleting or updating it in order to
+ * facilitate events, and any modifying method call may trigger an exception due to failure of optimistic locking.
  *
  * @author Oliver Gierke
  * @author Eberhard Wolff
@@ -109,6 +112,9 @@ public interface CrudRepository<T, ID> extends Repository<T, ID> {
 	 *
 	 * @param id must not be {@literal null}.
 	 * @throws IllegalArgumentException in case the given {@literal id} is {@literal null}
+	 * @throws OptimisticLockingFailureException when the entity uses optimistic locking and has a version attribute with
+	 *           a different value from that found in the persistence store. Also thrown if the entity is assumed to be
+	 *           present but does not exist in the database.
 	 */
 	void deleteById(ID id);
 
@@ -130,6 +136,9 @@ public interface CrudRepository<T, ID> extends Repository<T, ID> {
 	 *
 	 * @param ids must not be {@literal null}. Must not contain {@literal null} elements.
 	 * @throws IllegalArgumentException in case the given {@literal ids} or one of its elements is {@literal null}.
+	 * @throws OptimisticLockingFailureException when the entity uses optimistic locking and has a version attribute with
+	 *           a different value from that found in the persistence store. Also thrown if the entity is assumed to be
+	 *           present but does not exist in the database.
 	 * @since 2.5
 	 */
 	void deleteAllById(Iterable<? extends ID> ids);
@@ -149,4 +158,5 @@ public interface CrudRepository<T, ID> extends Repository<T, ID> {
 	 * Deletes all entities managed by the repository.
 	 */
 	void deleteAll();
+
 }

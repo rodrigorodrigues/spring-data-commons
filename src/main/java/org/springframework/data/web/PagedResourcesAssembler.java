@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024 the original author or authors.
+ * Copyright 2013-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.MethodParameter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,7 +39,6 @@ import org.springframework.hateoas.UriTemplate;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.hateoas.server.core.EmbeddedWrapper;
 import org.springframework.hateoas.server.core.EmbeddedWrappers;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.UriComponents;
@@ -58,7 +59,7 @@ public class PagedResourcesAssembler<T> implements RepresentationModelAssembler<
 	private final EmbeddedWrappers wrappers = new EmbeddedWrappers(false);
 
 	private boolean forceFirstAndLastRels = false;
-	private @Nullable MethodParameter parameter;
+	private final @Nullable MethodParameter parameter;
 
 	/**
 	 * Creates a new {@link PagedResourcesAssembler} using the given {@link PageableHandlerMethodArgumentResolver} and
@@ -288,20 +289,6 @@ public class PagedResourcesAssembler<T> implements RepresentationModelAssembler<
 		pageableResolver.enhance(builder, parameter, pageable);
 
 		return Link.of(UriTemplate.of(builder.build().toString()), relation);
-	}
-
-	/**
-	 * Return the {@link MethodParameter} to be used to potentially qualify the paging and sorting request parameters to.
-	 * Default implementations returns {@literal null}, which means the parameters will not be qualified.
-	 *
-	 * @return
-	 * @since 1.7
-	 * @deprecated since 3.1, rather set up the instance with {@link #withParameter(MethodParameter)}.
-	 */
-	@Nullable
-	@Deprecated(since = "3.1", forRemoval = true)
-	protected MethodParameter getMethodParameter() {
-		return null;
 	}
 
 	/**

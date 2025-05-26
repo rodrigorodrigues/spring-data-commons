@@ -22,7 +22,6 @@ import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.data.querydsl.binding.*;
-import org.springframework.data.util.CastUtils;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -108,7 +107,7 @@ public abstract class QuerydslPredicateArgumentResolverSupport {
 		TypeInformation<?> domainType = extractTypeInfo(parameter, predicateAnnotation).getRequiredActualType();
 
 		Optional<Class<? extends QuerydslBinderCustomizer<?>>> bindingsAnnotation = predicateAnnotation.getValue("bindings") //
-				.map(CastUtils::cast);
+				.map(it -> (Class) it);
 
 		QuerydslBindings bindings = bindingsAnnotation //
 				.map(it -> bindingsFactory.createBindingsFor(domainType, it)) //
@@ -117,8 +116,7 @@ public abstract class QuerydslPredicateArgumentResolverSupport {
 		return predicateBuilderCustomizer.getPredicate(domainType, queryParameters, bindings);
 	}
 
-	@Nullable
-	static Object potentiallyConvertMethodParameterValue(MethodParameter parameter, Predicate predicate) {
+	static @Nullable Object potentiallyConvertMethodParameterValue(MethodParameter parameter, Predicate predicate) {
 
 		if (!parameter.isOptional()) {
 			return predicate;

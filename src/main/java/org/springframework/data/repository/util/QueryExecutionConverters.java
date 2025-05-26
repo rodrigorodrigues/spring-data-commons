@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.ConditionalGenericConverter;
@@ -36,6 +38,8 @@ import org.springframework.core.convert.converter.GenericConverter;
 import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.SearchResult;
+import org.springframework.data.domain.SearchResults;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Window;
 import org.springframework.data.geo.GeoResults;
@@ -45,13 +49,11 @@ import org.springframework.data.util.NullableWrapperConverters;
 import org.springframework.data.util.StreamUtils;
 import org.springframework.data.util.Streamable;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
-import org.springframework.scheduling.annotation.AsyncResult;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ConcurrentReferenceHashMap;
 import org.springframework.util.ObjectUtils;
-import org.springframework.util.concurrent.ListenableFuture;
 
 /**
  * Converters to potentially wrap the execution of a repository method into a variety of wrapper types potentially being
@@ -59,10 +61,10 @@ import org.springframework.util.concurrent.ListenableFuture;
  * <ul>
  * <li>{@code java.util.concurrent.Future}</li>
  * <li>{@code java.util.concurrent.CompletableFuture}</li>
- * <li>{@code org.springframework.util.concurrent.ListenableFuture<}</li>
- * <li>{@code javaslang.collection.Seq}, {@code javaslang.collection.Map}, {@code javaslang.collection.Set} - as of
- * 1.13</li>
- * <li>{@code io.vavr.collection.Seq}, {@code io.vavr.collection.Map}, {@code io.vavr.collection.Set} - as of 2.0</li>
+ * <li>{@code javaslang.collection.Seq}, {@code javaslang.collection.Map}, {@code javaslang.collection.Set} - as of 1.13
+ * via {@link CustomCollections}</li>
+ * <li>{@code io.vavr.collection.Seq}, {@code io.vavr.collection.Map}, {@code io.vavr.collection.Set} - as of 2.0 via
+ * {@link CustomCollections}</li>
  * <li>Reactive wrappers supported by {@link org.springframework.data.util.ReactiveWrappers} - as of 2.0</li>
  * </ul>
  *
@@ -74,7 +76,6 @@ import org.springframework.util.concurrent.ListenableFuture;
  * @since 1.8
  * @see NullableWrapperConverters
  */
-@SuppressWarnings("removal")
 public abstract class QueryExecutionConverters {
 
 	private static final boolean VAVR_PRESENT = ClassUtils.isPresent("io.vavr.control.Try",
@@ -92,15 +93,14 @@ public abstract class QueryExecutionConverters {
 
 		WRAPPER_TYPES.add(WrapperType.singleValue(Future.class));
 		UNWRAPPER_TYPES.add(WrapperType.singleValue(Future.class));
-		WRAPPER_TYPES.add(WrapperType.singleValue(ListenableFuture.class));
 		WRAPPER_TYPES.add(WrapperType.singleValue(CompletableFuture.class));
-		UNWRAPPER_TYPES.add(WrapperType.singleValue(ListenableFuture.class));
 		UNWRAPPER_TYPES.add(WrapperType.singleValue(CompletableFuture.class));
 
 		ALLOWED_PAGEABLE_TYPES.add(Slice.class);
 		ALLOWED_PAGEABLE_TYPES.add(Page.class);
 		ALLOWED_PAGEABLE_TYPES.add(List.class);
 		ALLOWED_PAGEABLE_TYPES.add(Window.class);
+		ALLOWED_PAGEABLE_TYPES.add(SearchResults.class);
 
 		WRAPPER_TYPES.add(NullableWrapperToCompletableFutureConverter.getWrapperType());
 
@@ -108,7 +108,7 @@ public abstract class QueryExecutionConverters {
 
 		CustomCollections.getCustomTypes().stream().map(WrapperType::multiValue).forEach(WRAPPER_TYPES::add);
 
-		CustomCollections.getPaginationReturnTypes().forEach(ALLOWED_PAGEABLE_TYPES::add);
+		ALLOWED_PAGEABLE_TYPES.addAll(CustomCollections.getPaginationReturnTypes());
 
 		if (VAVR_PRESENT) {
 
@@ -205,7 +205,6 @@ public abstract class QueryExecutionConverters {
 		CustomCollections.registerConvertersIn(conversionService);
 
 		conversionService.addConverter(new NullableWrapperToCompletableFutureConverter());
-		conversionService.addConverter(new NullableWrapperToFutureConverter());
 		conversionService.addConverter(new IterableToStreamableConverter());
 	}
 
@@ -215,8 +214,8 @@ public abstract class QueryExecutionConverters {
 	 * @param source can be {@literal null}.
 	 * @return
 	 */
-	@Nullable
-	public static Object unwrap(@Nullable Object source) {
+	@Contract("null -> null")
+	public static @Nullable Object unwrap(@Nullable Object source) {
 
 		source = NullableWrapperConverters.unwrap(source);
 
@@ -257,6 +256,8 @@ public abstract class QueryExecutionConverters {
 		boolean needToUnwrap = type.isCollectionLike() //
 				|| Slice.class.isAssignableFrom(rawType) //
 				|| GeoResults.class.isAssignableFrom(rawType) //
+				|| SearchResult.class.isAssignableFrom(rawType) //
+				|| SearchResults.class.isAssignableFrom(rawType) //
 				|| rawType.isArray() //
 				|| supports(rawType) //
 				|| Stream.class.isAssignableFrom(rawType);
@@ -280,8 +281,7 @@ public abstract class QueryExecutionConverters {
 	 * @param returnType must not be {@literal null}.
 	 * @return can be {@literal null}.
 	 */
-	@Nullable
-	public static ExecutionAdapter getExecutionAdapter(Class<?> returnType) {
+	public static @Nullable ExecutionAdapter getExecutionAdapter(Class<?> returnType) {
 
 		Assert.notNull(returnType, "Return type must not be null");
 
@@ -289,10 +289,12 @@ public abstract class QueryExecutionConverters {
 	}
 
 	public interface ThrowingSupplier {
+		@Nullable
 		Object get() throws Throwable;
 	}
 
 	public interface ExecutionAdapter {
+		@Nullable
 		Object apply(ThrowingSupplier supplier) throws Throwable;
 	}
 
@@ -307,19 +309,6 @@ public abstract class QueryExecutionConverters {
 		private final Object nullValue;
 		private final Iterable<Class<?>> wrapperTypes;
 
-		/**
-		 * Creates a new {@link AbstractWrapperTypeConverter} using the given {@link ConversionService} and wrapper type.
-		 *
-		 * @param nullValue must not be {@literal null}.
-		 */
-		AbstractWrapperTypeConverter(Object nullValue) {
-
-			Assert.notNull(nullValue, "Null value must not be null");
-
-			this.nullValue = nullValue;
-			this.wrapperTypes = Collections.singleton(nullValue.getClass());
-		}
-
 		AbstractWrapperTypeConverter(Object nullValue, Iterable<Class<?>> wrapperTypes) {
 			this.nullValue = nullValue;
 			this.wrapperTypes = wrapperTypes;
@@ -333,9 +322,10 @@ public abstract class QueryExecutionConverters {
 					.stream().collect(StreamUtils.toUnmodifiableSet());
 		}
 
-		@Nullable
+		@Contract("null, _, _ -> null")
 		@Override
-		public final Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
+		public final @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceType,
+				TypeDescriptor targetType) {
 
 			if (source == null) {
 				return null;
@@ -344,7 +334,6 @@ public abstract class QueryExecutionConverters {
 			NullableWrapper wrapper = (NullableWrapper) source;
 			Object value = wrapper.getValue();
 
-			// TODO: Add Recursive conversion once we move to Spring 4
 			return value == null ? nullValue : wrap(value);
 		}
 
@@ -355,28 +344,6 @@ public abstract class QueryExecutionConverters {
 		 * @return must not be {@literal null}.
 		 */
 		protected abstract Object wrap(Object source);
-	}
-
-	/**
-	 * A Spring {@link Converter} to support returning {@link Future} instances from repository methods.
-	 *
-	 * @author Oliver Gierke
-	 */
-	@Deprecated(since = "3.0", forRemoval = true)
-	@SuppressWarnings("removal")
-	private static class NullableWrapperToFutureConverter extends AbstractWrapperTypeConverter {
-
-		/**
-		 * Creates a new {@link NullableWrapperToFutureConverter} using the given {@link ConversionService}.
-		 */
-		NullableWrapperToFutureConverter() {
-			super(new AsyncResult<>(null), List.of(ListenableFuture.class));
-		}
-
-		@Override
-		protected Object wrap(Object source) {
-			return new AsyncResult<>(source);
-		}
 	}
 
 	/**
@@ -437,10 +404,9 @@ public abstract class QueryExecutionConverters {
 			});
 		}
 
-		@SuppressWarnings("unchecked")
-		@Nullable
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		@Override
-		public Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
+		public @Nullable Object convert(@Nullable Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
 
 			Streamable<Object> streamable = source == null //
 					? Streamable.empty() //
@@ -498,7 +464,7 @@ public abstract class QueryExecutionConverters {
 					+ ")";
 		}
 
-		enum Cardinality {
+		public enum Cardinality {
 			NONE, SINGLE, MULTI;
 		}
 

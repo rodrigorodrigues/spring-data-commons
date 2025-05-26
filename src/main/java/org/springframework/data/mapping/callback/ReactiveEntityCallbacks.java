@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2024 the original author or authors.
+ * Copyright 2019-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,7 +77,7 @@ public interface ReactiveEntityCallbacks {
 	/**
 	 * Obtain a new {@link ReactiveEntityCallbacks} instance.
 	 * <p>
-	 * {@link EntityCallback callbacks} are pre loaded from the given {@link BeanFactory}. <br />
+	 * {@link EntityCallback callbacks} are pre-loaded from the given {@link BeanFactory}. <br />
 	 * Use {@link #addEntityCallback(EntityCallback)} to register additional callbacks manually.
 	 *
 	 * @param beanFactory must not be {@literal null}.

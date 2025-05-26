@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2024 the original author or authors.
+ * Copyright 2019-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -35,7 +37,6 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
@@ -53,11 +54,8 @@ class EntityCallbackDiscoverer {
 
 	private final CallbackRetriever defaultRetriever = new CallbackRetriever();
 	private final Map<CallbackCacheKey, CallbackRetriever> retrieverCache = new ConcurrentHashMap<>(64);
-	private final Map<Class<?>, ResolvableType> entityTypeCache = new ConcurrentHashMap<>(64);
 
-	@Nullable private ClassLoader beanClassLoader;
-
-	private Object retrievalMutex = this.defaultRetriever;
+	private @Nullable ClassLoader beanClassLoader;
 
 	/**
 	 * Create a new {@link EntityCallback} instance.
@@ -76,7 +74,7 @@ class EntityCallbackDiscoverer {
 
 		Assert.notNull(callback, "Callback must not be null");
 
-		synchronized (this.retrievalMutex) {
+		synchronized (this.defaultRetriever) {
 
 			// Explicitly remove target for a proxy, if registered already,
 			// in order to avoid double invocations of the same callback.
@@ -87,14 +85,6 @@ class EntityCallbackDiscoverer {
 			}
 
 			this.defaultRetriever.entityCallbacks.add(callback);
-			this.retrieverCache.clear();
-		}
-	}
-
-	void removeEntityCallback(EntityCallback<?> callback) {
-
-		synchronized (this.retrievalMutex) {
-			this.defaultRetriever.entityCallbacks.remove(callback);
 			this.retrieverCache.clear();
 		}
 	}
@@ -112,8 +102,7 @@ class EntityCallbackDiscoverer {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	<T extends S, S> Collection<EntityCallback<S>> getEntityCallbacks(Class<T> entity, ResolvableType callbackType) {
 
-		Class<?> sourceType = entity;
-		CallbackCacheKey cacheKey = new CallbackCacheKey(callbackType, sourceType);
+		CallbackCacheKey cacheKey = new CallbackCacheKey(callbackType, entity);
 
 		// Quick check for existing entry on ConcurrentHashMap...
 		CallbackRetriever retriever = this.retrieverCache.get(cacheKey);
@@ -122,16 +111,16 @@ class EntityCallbackDiscoverer {
 		}
 
 		if (this.beanClassLoader == null || ClassUtils.isCacheSafe(entity, this.beanClassLoader)
-				&& (sourceType == null || ClassUtils.isCacheSafe(sourceType, this.beanClassLoader))) {
+				&& ClassUtils.isCacheSafe(entity, this.beanClassLoader)) {
 
 			// Fully synchronized building and caching of a CallbackRetriever
-			synchronized (this.retrievalMutex) {
+			synchronized (this.defaultRetriever) {
 				retriever = this.retrieverCache.get(cacheKey);
 				if (retriever != null) {
 					return (Collection) retriever.getEntityCallbacks();
 				}
 				retriever = new CallbackRetriever();
-				Collection<EntityCallback<?>> callbacks = retrieveEntityCallbacks(ResolvableType.forClass(sourceType),
+				Collection<EntityCallback<?>> callbacks = retrieveEntityCallbacks(ResolvableType.forClass(entity),
 						callbackType, retriever);
 				this.retrieverCache.put(cacheKey, retriever);
 				return (Collection) callbacks;
@@ -140,19 +129,6 @@ class EntityCallbackDiscoverer {
 			// No CallbackRetriever caching -> no synchronization necessary
 			return (Collection) retrieveEntityCallbacks(callbackType, callbackType, null);
 		}
-	}
-
-	@Nullable
-	ResolvableType resolveDeclaredEntityType(Class<?> callbackType) {
-
-		ResolvableType eventType = entityTypeCache.get(callbackType);
-
-		if (eventType == null) {
-			eventType = ResolvableType.forClass(callbackType).as(EntityCallback.class).getGeneric();
-			entityTypeCache.put(callbackType, eventType);
-		}
-
-		return eventType != ResolvableType.NONE ? eventType : null;
 	}
 
 	/**
@@ -169,7 +145,7 @@ class EntityCallbackDiscoverer {
 		List<EntityCallback<?>> allCallbacks = new ArrayList<>();
 		Set<EntityCallback<?>> callbacks;
 
-		synchronized (this.retrievalMutex) {
+		synchronized (this.defaultRetriever) {
 			callbacks = new LinkedHashSet<>(this.defaultRetriever.entityCallbacks);
 		}
 
@@ -211,15 +187,12 @@ class EntityCallbackDiscoverer {
 			if (this.beanClassLoader == null) {
 				this.beanClassLoader = cbf.getBeanClassLoader();
 			}
-
-			this.retrievalMutex = cbf.getSingletonMutex();
 		}
 
 		defaultRetriever.discoverEntityCallbacks(beanFactory);
 		this.retrieverCache.clear();
 	}
 
-	@Nullable
 	static Method lookupCallbackMethod(Class<?> callbackType, Class<?> entityType, Object[] args) {
 
 		Collection<Method> methods = new ArrayList<>(1);
@@ -299,6 +272,7 @@ class EntityCallbackDiscoverer {
 			return this.entityCallbacks;
 		}
 
+		@SuppressWarnings("rawtypes")
 		void discoverEntityCallbacks(BeanFactory beanFactory) {
 
 			// We need both a ListableBeanFactory and BeanDefinitionRegistry here for advanced inspection.

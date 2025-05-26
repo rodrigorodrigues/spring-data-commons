@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2024 the original author or authors.
+ * Copyright 2019-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,6 +99,7 @@ class DefaultReactiveEntityCallbacks implements ReactiveEntityCallbacks {
 
 	static class DefaultReactiveEntityCallbackInvoker implements ReactiveEntityCallbackInvoker {
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public <T> Mono<T> invokeCallback(EntityCallback<T> callback, T entity,
 				BiFunction<EntityCallback<T>, T, Object> callbackInvokerFunction) {

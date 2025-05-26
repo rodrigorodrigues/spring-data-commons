@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2024 the original author or authors.
+ * Copyright 2016-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,11 @@ package org.springframework.data.querydsl.binding;
 
 import java.beans.PropertyDescriptor;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.querydsl.EntityPathResolver;
 import org.springframework.data.querydsl.QuerydslUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 import com.querydsl.core.types.Path;
@@ -72,9 +73,8 @@ class QuerydslPathInformation implements PathInformation {
 		return path.getMetadata().getElement().toString();
 	}
 
-	@Nullable
 	@Override
-	public PropertyDescriptor getLeafPropertyDescriptor() {
+	public @Nullable PropertyDescriptor getLeafPropertyDescriptor() {
 		return BeanUtils.getPropertyDescriptor(getLeafParentType(), getLeafProperty());
 	}
 

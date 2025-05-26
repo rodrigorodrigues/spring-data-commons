@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 the original author or authors.
+ * Copyright 2008-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 package org.springframework.data.repository.query.parser;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -46,7 +44,7 @@ class OrderBySource {
 	private static final String BLOCK_SPLIT = "(?<=Asc|Desc)(?=\\p{Lu})";
 	private static final Pattern DIRECTION_SPLIT = Pattern.compile("(.+?)(Asc|Desc)?$");
 	private static final String INVALID_ORDER_SYNTAX = "Invalid order syntax for part %s";
-	private static final Set<String> DIRECTION_KEYWORDS = new HashSet<>(Arrays.asList("Asc", "Desc"));
+	private static final Set<String> DIRECTION_KEYWORDS = Set.of("Asc", "Desc");
 
 	private final List<Order> orders;
 

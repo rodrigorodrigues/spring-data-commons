@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,10 @@ package org.springframework.data.mapping;
 import java.lang.annotation.Annotation;
 import java.util.Iterator;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.annotation.Immutable;
 import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -44,19 +45,6 @@ public interface PersistentEntity<T, P extends PersistentProperty<P>> extends It
 	String getName();
 
 	/**
-	 * Returns the {@link PreferredConstructor} to be used to instantiate objects of this {@link PersistentEntity}.
-	 *
-	 * @return {@literal null} in case no suitable constructor for automatic construction can be found. This usually
-	 *         indicates that the instantiation of the object of that persistent entity is done through either a
-	 *         customer {@link org.springframework.data.mapping.model.EntityInstantiator} or handled by custom
-	 *         conversion mechanisms entirely.
-	 * @deprecated since 3.0, use {@link #getInstanceCreatorMetadata()}.
-	 */
-	@Nullable
-	@Deprecated
-	PreferredConstructor<T, P> getPersistenceConstructor();
-
-	/**
 	 * Returns the {@link InstanceCreatorMetadata} to be used to instantiate objects of this {@link PersistentEntity}.
 	 *
 	 * @return {@literal null} in case no suitable creation mechanism for automatic construction can be found. This
@@ -67,20 +55,6 @@ public interface PersistentEntity<T, P extends PersistentProperty<P>> extends It
 	 */
 	@Nullable
 	InstanceCreatorMetadata<P> getInstanceCreatorMetadata();
-
-	/**
-	 * Returns whether the given {@link PersistentProperty} is referred to by a constructor argument of the
-	 * {@link PersistentEntity}.
-	 *
-	 * @param property can be {@literal null}.
-	 * @return true if the given {@link PersistentProperty} is referred to by a constructor argument or {@literal false}
-	 *         if not or {@literal null}.
-	 * @deprecated since 3.0, use {@link #isCreatorArgument(PersistentProperty)} instead.
-	 */
-	@Deprecated
-	default boolean isConstructorArgument(PersistentProperty<?> property) {
-		return isCreatorArgument(property);
-	}
 
 	/**
 	 * Returns whether the given {@link PersistentProperty} is referred to by a creator argument of the
@@ -197,8 +171,7 @@ public interface PersistentEntity<T, P extends PersistentProperty<P>> extends It
 	 * @return {@literal null} if no property found with given annotation type.
 	 * @since 1.8
 	 */
-	@Nullable
-	default P getPersistentProperty(Class<? extends Annotation> annotationType) {
+	default @Nullable P getPersistentProperty(Class<? extends Annotation> annotationType) {
 
 		Iterator<P> it = getPersistentProperties(annotationType).iterator();
 		return it.hasNext() ? it.next() : null;
@@ -306,8 +279,7 @@ public interface PersistentEntity<T, P extends PersistentProperty<P>> extends It
 	 * @return {@literal null} if not found.
 	 * @since 1.8
 	 */
-	@Nullable
-	<A extends Annotation> A findAnnotation(Class<A> annotationType);
+	<A extends Annotation> @Nullable A findAnnotation(Class<A> annotationType);
 
 	/**
 	 * Returns the required annotation of the given type on the {@link PersistentEntity}.

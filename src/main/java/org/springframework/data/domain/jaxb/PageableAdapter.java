@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@ import jakarta.xml.bind.annotation.adapters.XmlAdapter;
 
 import java.util.Collections;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.jaxb.SpringDataJaxb.PageRequestDto;
 import org.springframework.data.domain.jaxb.SpringDataJaxb.SortDto;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 
 /**
  * {@link XmlAdapter} to convert {@link Pageable} instances int a {@link PageRequestDto} and vice versa.
@@ -34,9 +35,8 @@ import org.springframework.lang.Nullable;
  */
 class PageableAdapter extends XmlAdapter<PageRequestDto, Pageable> {
 
-	@Nullable
 	@Override
-	public PageRequestDto marshal(@Nullable Pageable request) {
+	public @Nullable PageRequestDto marshal(@Nullable Pageable request) {
 
 		if (request == null) {
 			return null;

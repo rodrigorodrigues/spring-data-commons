@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,7 @@
  */
 package org.springframework.data.repository.config;
 
-import static org.springframework.beans.factory.support.BeanDefinitionReaderUtils.GENERATED_BEAN_NAME_SEPARATOR;
-import static org.springframework.beans.factory.support.BeanDefinitionReaderUtils.generateBeanName;
+import static org.springframework.beans.factory.support.BeanDefinitionReaderUtils.*;
 
 import java.lang.annotation.Annotation;
 import java.util.Collection;
@@ -28,6 +27,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -38,7 +39,6 @@ import org.springframework.core.log.LogMessage;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.AbstractRepositoryMetadata;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -179,7 +179,7 @@ public abstract class RepositoryConfigurationExtensionSupport implements Reposit
 	 * @return the bean name generated for the given {@link BeanDefinition}
 	 */
 	public static String registerWithSourceAndGeneratedBeanName(AbstractBeanDefinition bean,
-			BeanDefinitionRegistry registry, Object source) {
+			BeanDefinitionRegistry registry, @Nullable Object source) {
 
 		bean.setSource(source);
 
@@ -200,7 +200,7 @@ public abstract class RepositoryConfigurationExtensionSupport implements Reposit
 	 * @since 2.1
 	 */
 	public static void registerIfNotAlreadyRegistered(Supplier<AbstractBeanDefinition> supplier,
-			BeanDefinitionRegistry registry, String beanName, Object source) {
+			BeanDefinitionRegistry registry, String beanName, @Nullable Object source) {
 
 		if (registry.containsBeanDefinition(beanName)) {
 			return;
@@ -223,7 +223,7 @@ public abstract class RepositoryConfigurationExtensionSupport implements Reposit
 	 * @since 2.1
 	 */
 	public static void registerLazyIfNotAlreadyRegistered(Supplier<AbstractBeanDefinition> supplier,
-			BeanDefinitionRegistry registry, String beanName, Object source) {
+			BeanDefinitionRegistry registry, String beanName, @Nullable Object source) {
 
 		if (registry.containsBeanDefinition(beanName)) {
 			return;
@@ -246,7 +246,7 @@ public abstract class RepositoryConfigurationExtensionSupport implements Reposit
 	 */
 	public static boolean hasBean(Class<?> type, BeanDefinitionRegistry registry) {
 
-		String name = String.format("%s%s0", type.getName(), GENERATED_BEAN_NAME_SEPARATOR);
+		String name = type.getName().concat(GENERATED_BEAN_NAME_SEPARATOR).concat("0");
 		return registry.containsBeanDefinition(name);
 	}
 

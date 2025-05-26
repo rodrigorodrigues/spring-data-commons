@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2024 the original author or authors.
+ * Copyright 2017-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 package org.springframework.data.domain;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
@@ -49,7 +51,7 @@ class TypedExample<T> implements Example<T> {
 	}
 
 	@Override
-	public boolean equals(Object o) {
+	public boolean equals(@Nullable Object o) {
 
 		if (this == o) {
 			return true;
@@ -68,9 +70,7 @@ class TypedExample<T> implements Example<T> {
 
 	@Override
 	public int hashCode() {
-		int result = ObjectUtils.nullSafeHashCode(probe);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(matcher);
-		return result;
+		return ObjectUtils.nullSafeHash(probe, matcher);
 	}
 
 	@Override

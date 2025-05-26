@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024 the original author or authors.
+ * Copyright 2013-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -198,6 +198,16 @@ class DefaultRepositoryInformationUnitTests {
 		assertThat(information.getQueryMethods()).allMatch(method -> !method.isBridge());
 	}
 
+	@Test // GH-???
+	void annotatedQueryMethodWithFragmentImplementationIsNotConsideredForQueryMethods() {
+
+		RepositoryMetadata metadata = new DefaultRepositoryMetadata(CustomDefaultRepositoryMethodsRepository.class);
+		RepositoryInformation information = new DefaultRepositoryInformation(metadata, CrudRepository.class,
+			RepositoryComposition.of(RepositoryFragment.implemented(new FragmentThatImplementsFinderWithQueryAnnotation())));
+
+		assertThat(information.getQueryMethods()).allMatch(it -> !it.getName().equals("findAll"));
+	}
+
 	@Test // DATACMNS-854
 	void discoversCustomlyImplementedCrudMethodWithGenerics() throws SecurityException, NoSuchMethodException {
 
@@ -375,6 +385,12 @@ class DefaultRepositoryInformationUnitTests {
 		@Override
 		@MyQuery
 		List<User> findAll();
+	}
+
+	static class FragmentThatImplementsFinderWithQueryAnnotation {
+		public List<User> findAll() {
+			return null;
+		}
 	}
 
 	// DATACMNS-854, DATACMNS-912

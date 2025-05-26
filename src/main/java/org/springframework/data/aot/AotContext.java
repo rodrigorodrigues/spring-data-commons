@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,18 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanReference;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.EnvironmentCapable;
+import org.springframework.core.env.StandardEnvironment;
 import org.springframework.data.util.TypeScanner;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -43,10 +47,12 @@ import org.springframework.util.Assert;
  * @author Christoph Strobl
  * @author John Blum
  * @author Mark Paluch
- * @see BeanFactory
  * @since 3.0
+ * @see BeanFactory
  */
-public interface AotContext {
+public interface AotContext extends EnvironmentCapable {
+
+	String GENERATED_REPOSITORIES_ENABLED = "spring.aot.repositories.enabled";
 
 	/**
 	 * Create an {@link AotContext} backed by the given {@link BeanFactory}.
@@ -59,7 +65,23 @@ public interface AotContext {
 
 		Assert.notNull(beanFactory, "BeanFactory must not be null");
 
-		return new DefaultAotContext(beanFactory);
+		return new DefaultAotContext(beanFactory, new StandardEnvironment());
+	}
+
+	/**
+	 * Create an {@link AotContext} backed by the given {@link BeanFactory}.
+	 *
+	 * @param beanFactory reference to the {@link BeanFactory}; must not be {@literal null}.
+	 * @param environment reference to the {@link Environment}; must not be {@literal null}.
+	 * @return a new instance of {@link AotContext}.
+	 * @see BeanFactory
+	 */
+	static AotContext from(BeanFactory beanFactory, Environment environment) {
+
+		Assert.notNull(beanFactory, "BeanFactory must not be null");
+		Assert.notNull(environment, "Environment must not be null");
+
+		return new DefaultAotContext(beanFactory, environment);
 	}
 
 	/**
@@ -140,7 +162,7 @@ public interface AotContext {
 	}
 
 	/**
-	 * Returns a {@link IntrospectedBeanDefinition} to obtain further detail about the underlying bean definition. A
+	 * Returns a {@link IntrospectedBeanDefinition} to obtain further detail about the underlying bean definition. An
 	 * introspected bean definition can also point to an absent bean definition.
 	 *
 	 * @param reference {@link BeanReference} to the managed bean.
@@ -151,7 +173,7 @@ public interface AotContext {
 	}
 
 	/**
-	 * Returns a {@link IntrospectedBeanDefinition} to obtain further detail about the underlying bean definition. A
+	 * Returns a {@link IntrospectedBeanDefinition} to obtain further detail about the underlying bean definition. An
 	 * introspected bean definition can also point to an absent bean definition.
 	 *
 	 * @param beanName {@link String} containing the {@literal name} of the bean to evaluate; must not be {@literal null}.
@@ -251,7 +273,6 @@ public interface AotContext {
 		 *           bean}.
 		 * @see BeanDefinition
 		 */
-
 		BeanDefinition getBeanDefinition() throws NoSuchBeanDefinitionException;
 
 		/**

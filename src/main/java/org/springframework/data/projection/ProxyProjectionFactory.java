@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 the original author or authors.
+ * Copyright 2014-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.factory.BeanClassLoaderAware;
@@ -32,7 +35,7 @@ import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.data.convert.Jsr310Converters;
 import org.springframework.data.util.Lazy;
 import org.springframework.data.util.NullableWrapperConverters;
-import org.springframework.lang.Nullable;
+import org.springframework.data.util.NullnessMethodInvocationValidator;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
@@ -65,6 +68,9 @@ class ProxyProjectionFactory implements ProjectionFactory, BeanClassLoaderAware 
 
 	private final Lazy<DefaultMethodInvokingMethodInterceptor> defaultMethodInvokingMethodInterceptor = Lazy
 			.of(DefaultMethodInvokingMethodInterceptor::new);
+
+	private final Lazy<NullnessMethodInvocationValidator> nullabilityValidator = Lazy
+			.of(NullnessMethodInvocationValidator::new);
 
 	/**
 	 * Creates a new {@link ProxyProjectionFactory}.
@@ -119,6 +125,11 @@ class ProxyProjectionFactory implements ProjectionFactory, BeanClassLoaderAware 
 		}
 
 		factory.addAdvice(new TargetAwareMethodInterceptor(source.getClass()));
+
+		if (projectionMetadata.definesNullness) {
+			factory.addAdvice(nullabilityValidator.get());
+		}
+
 		factory.addAdvice(getMethodInterceptor(source, projectionType));
 
 		return (T) factory.getProxy(classLoader == null ? ClassUtils.getDefaultClassLoader() : classLoader);
@@ -230,9 +241,8 @@ class ProxyProjectionFactory implements ProjectionFactory, BeanClassLoaderAware 
 			Assert.notNull(targetType, "Target type must not be null");
 		}
 
-		@Nullable
 		@Override
-		public Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
+		public @Nullable Object invoke(@SuppressWarnings("null") MethodInvocation invocation) throws Throwable {
 
 			if (invocation.getMethod().equals(GET_TARGET_CLASS_METHOD)) {
 				return targetType;
@@ -291,10 +301,12 @@ class ProxyProjectionFactory implements ProjectionFactory, BeanClassLoaderAware 
 	 *
 	 * @since 3.1.1
 	 */
-	record ProjectionMetadata(boolean hasDefaultMethods, ProjectionInformation projectionInformation) {
+	record ProjectionMetadata(boolean hasDefaultMethods, boolean definesNullness,
+			ProjectionInformation projectionInformation) {
 
 		public static ProjectionMetadata create(Class<?> projectionType, ProjectionInformation projectionInformation) {
 			return new ProjectionMetadata(DefaultMethodInvokingMethodInterceptor.hasDefaultMethods(projectionType),
+					NullnessMethodInvocationValidator.supports(projectionType),
 					projectionInformation);
 		}
 	}

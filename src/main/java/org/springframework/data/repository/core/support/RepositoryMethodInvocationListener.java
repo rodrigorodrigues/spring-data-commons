@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 the original author or authors.
+ * Copyright 2020-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -81,8 +82,7 @@ public interface RepositoryMethodInvocationListener {
 			return method;
 		}
 
-		@Nullable
-		public RepositoryMethodInvocationResult getResult() {
+		public @Nullable RepositoryMethodInvocationResult getResult() {
 			return result;
 		}
 

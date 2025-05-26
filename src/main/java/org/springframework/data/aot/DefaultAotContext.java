@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 the original author or authors.
+ * Copyright 2022-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.core.env.Environment;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -38,14 +41,22 @@ class DefaultAotContext implements AotContext {
 
 	private final ConfigurableListableBeanFactory factory;
 
-	public DefaultAotContext(BeanFactory beanFactory) {
+	private final Environment environment;
+
+	public DefaultAotContext(BeanFactory beanFactory, Environment environment) {
 		factory = beanFactory instanceof ConfigurableListableBeanFactory cbf ? cbf
 				: new DefaultListableBeanFactory(beanFactory);
+		this.environment = environment;
 	}
 
 	@Override
 	public ConfigurableListableBeanFactory getBeanFactory() {
 		return factory;
+	}
+
+	@Override
+	public Environment getEnvironment() {
+		return environment;
 	}
 
 	@Override
@@ -132,8 +143,9 @@ class DefaultAotContext implements AotContext {
 		}
 
 		@Override
-		public Class<?> resolveType() {
+		public @Nullable Class<?> resolveType() {
 			return factory.getType(beanName, false);
 		}
 	}
+
 }

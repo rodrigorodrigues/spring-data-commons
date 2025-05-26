@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2024 the original author or authors.
+ * Copyright 2011-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package org.springframework.data.mapping;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Value object to capture {@link Association}s.
@@ -32,8 +32,8 @@ public class Association<P extends PersistentProperty<P>> {
 	/**
 	 * Creates a new {@link Association} between the two given {@link PersistentProperty}s.
 	 *
-	 * @param inverse
-	 * @param obverse
+	 * @param inverse the inverse {@link PersistentProperty}.
+	 * @param obverse the obverse {@link PersistentProperty}. Can be {@literal null} if absent.
 	 */
 	public Association(P inverse, @Nullable P obverse) {
 		this.inverse = inverse;
@@ -44,8 +44,7 @@ public class Association<P extends PersistentProperty<P>> {
 		return inverse;
 	}
 
-	@Nullable
-	public P getObverse() {
+	public @Nullable P getObverse() {
 		return obverse;
 	}
 }

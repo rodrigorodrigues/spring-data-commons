@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2024 the original author or authors.
+ * Copyright 2015-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,22 @@ package org.springframework.data.repository.query;
 
 import java.beans.PropertyDescriptor;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.data.mapping.Parameter;
 import org.springframework.data.mapping.PreferredConstructor;
 import org.springframework.data.mapping.model.PreferredConstructorDiscoverer;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.projection.ProjectionInformation;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
@@ -47,11 +49,13 @@ import org.springframework.util.ObjectUtils;
  */
 public abstract class ReturnedType {
 
+	private static final Log logger = LogFactory.getLog(ReturnedType.class);
+
 	private static final Map<CacheKey, ReturnedType> cache = new ConcurrentReferenceHashMap<>(32);
 
 	private final Class<?> domainType;
 
-	private ReturnedType(Class<?> domainType) {
+	protected ReturnedType(Class<?> domainType) {
 		this.domainType = domainType;
 	}
 
@@ -93,6 +97,7 @@ public abstract class ReturnedType {
 	 * @param source can be {@literal null}.
 	 * @return
 	 */
+	@Contract("null -> false")
 	public final boolean isInstance(@Nullable Object source) {
 		return getReturnedType().isInstance(source);
 	}
@@ -124,8 +129,7 @@ public abstract class ReturnedType {
 	 *
 	 * @return
 	 */
-	@Nullable
-	public abstract Class<?> getTypeToRead();
+	public abstract @Nullable Class<?> getTypeToRead();
 
 	/**
 	 * Returns the properties required to be used to populate the result.
@@ -203,9 +207,8 @@ public abstract class ReturnedType {
 			return !information.getType().isAssignableFrom(domainType);
 		}
 
-		@Nullable
 		@Override
-		public Class<?> getTypeToRead() {
+		public @Nullable Class<?> getTypeToRead() {
 			return isProjecting() && information.isClosed() ? null : domainType;
 		}
 
@@ -224,7 +227,7 @@ public abstract class ReturnedType {
 	 */
 	private static final class ReturnedClass extends ReturnedType {
 
-		private static final Set<Class<?>> VOID_TYPES = new HashSet<>(Arrays.asList(Void.class, void.class));
+		private static final Set<Class<?>> VOID_TYPES = Set.of(Void.class, void.class);
 
 		private final Class<?> type;
 		private final boolean isDto;
@@ -294,10 +297,21 @@ public abstract class ReturnedType {
 				return Collections.emptyList();
 			}
 
-			List<String> properties = new ArrayList<>(constructor.getConstructor().getParameterCount());
+			int parameterCount = constructor.getConstructor().getParameterCount();
+			List<String> properties = new ArrayList<>(parameterCount);
 
 			for (Parameter<Object, ?> parameter : constructor.getParameters()) {
-				properties.add(parameter.getName());
+				if (parameter.hasName()) {
+					properties.add(parameter.getRequiredName());
+				}
+			}
+
+			if (properties.isEmpty() && parameterCount > 0) {
+				if (logger.isWarnEnabled()) {
+					logger.warn(("No constructor parameter names discovered. "
+							+ "Compile the affected code with '-parameters' instead or avoid its introspection: %s")
+							.formatted(type.getName()));
+				}
 			}
 
 			return Collections.unmodifiableList(properties);
@@ -369,9 +383,11 @@ public abstract class ReturnedType {
 
 		@Override
 		public int hashCode() {
+
 			int result = ObjectUtils.nullSafeHashCode(returnedType);
 			result = 31 * result + ObjectUtils.nullSafeHashCode(domainType);
 			result = 31 * result + projectionFactoryHashCode;
+
 			return result;
 		}
 

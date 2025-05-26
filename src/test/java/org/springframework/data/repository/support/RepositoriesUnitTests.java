@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,7 @@ import org.springframework.data.repository.core.support.DummyEntityInformation;
 import org.springframework.data.repository.core.support.DummyRepositoryFactoryBean;
 import org.springframework.data.repository.core.support.DummyRepositoryInformation;
 import org.springframework.data.repository.core.support.RepositoryFactoryInformation;
+import org.springframework.data.repository.core.support.RepositoryFragmentsContributor;
 import org.springframework.data.repository.query.QueryMethod;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.util.ClassUtils;
@@ -288,6 +289,11 @@ class RepositoriesUnitTests {
 		@Override
 		public RepositoryInformation getRepositoryInformation() {
 			return new DummyRepositoryInformation(repositoryMetadata);
+		}
+
+		@Override
+		public RepositoryFragmentsContributor getRepositoryFragmentsContributor() {
+			return RepositoryFragmentsContributor.empty();
 		}
 
 		@Override
